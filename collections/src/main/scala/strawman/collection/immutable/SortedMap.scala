@@ -21,6 +21,17 @@ trait SortedMap[K, +V]
     *  @return      a wrapper of the map with a default value
     */
   override def withDefault[V1 >: V](d: K => V1): SortedMap[K, V1] = new SortedMap.WithDefault[K, V1](this, d)
+
+  /** The same map with a given default value.
+    * Note: The default is only used for `apply`. Other methods like `get`, `contains`, `iterator`, `keys`, etc.
+    * are not affected by `withDefaultValue`.
+    *
+    * Invoking transformer methods (e.g. `map`) will not preserve the default value.
+    *
+    * @param d default value used for non-present keys
+    * @return a wrapper of the map with a default value
+    */
+  override def withDefaultValue[V1 >: V](d: V1): Map[K, V1] = new SortedMap.WithDefault[K, V1](this, _ => d)
 }
 
 trait SortedMapOps[K, +V, +CC[X, +Y] <: Map[X, Y] with SortedMapOps[X, Y, CC, _], +C <: SortedMapOps[K, V, CC, C]]
