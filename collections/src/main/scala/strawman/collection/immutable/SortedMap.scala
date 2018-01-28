@@ -3,7 +3,7 @@ package collection
 package immutable
 
 import strawman.collection.mutable.Builder
-import scala.{Option, Ordering, inline}
+import scala.{Option, Ordering, `inline`}
 import scala.Predef.println
 
 trait SortedMap[K, +V]
