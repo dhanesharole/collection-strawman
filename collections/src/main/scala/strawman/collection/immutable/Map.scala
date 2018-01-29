@@ -22,7 +22,7 @@ trait Map[K, +V]
     *  @param d     the function mapping keys to values, used for non-present keys
     *  @return      a wrapper of the map with a default value
     */
-  def withDefault[V1 >: V](d: K => V1): Map[K, V1] = new Map.WithDefault[K, V1](this, d)
+  def withDefault[V1 >: V](d: K => V1): Map[K, V1] = new Map.WithDefaultMap[K, V1](this, d)
 
   /** The same map with a given default value.
     *  Note: The default is only used for `apply`. Other methods like `get`, `contains`, `iterator`, `keys`, etc.
@@ -33,7 +33,7 @@ trait Map[K, +V]
     *  @param d     default value used for non-present keys
     *  @return      a wrapper of the map with a default value
     */
-  def withDefaultValue[V1 >: V](d: V1): Map[K, V1] = new Map.WithDefault[K, V1](this, x => d)
+  def withDefaultValue[V1 >: V](d: V1): Map[K, V1] = new Map.WithDefaultMap[K, V1](this, x => d)
 
   override final def toMap[K2, V2](implicit ev: (K, V) <:< (K2, V2)): Map[K2, V2] = this.asInstanceOf[Map[K2, V2]]
 
@@ -127,6 +127,21 @@ trait MapOps[K, +V, +CC[X, +Y] <: MapOps[X, Y, CC, _], +C <: MapOps[K, V, CC, C]
   * @define Coll `immutable.Map`
   */
 object Map extends MapFactory[Map] {
+
+  final class WithDefaultMap[K, +V](val underlying: Map[K, V], val defaultValue: K => V) extends Map[K, V] with WithDefaultOps[K, V, Map[K, V]] {
+    override def remove(key: K): Map[K, V] = new WithDefaultMap[K, V](underlying - key, defaultValue)
+
+    override def updated[V1 >: V](key: K, value: V1): Map[K, V1] =
+      new WithDefaultMap[K, V1](underlying.updated[V1](key, value), defaultValue)
+
+    override def empty: Map[K, V] = new WithDefaultMap[K, V](underlying.empty, defaultValue)
+
+    override protected[this] def fromSpecificIterable(coll: collection.Iterable[(K, V)]): Map[K, V] =
+      new WithDefaultMap[K, V](mapFactory.from(coll), defaultValue)
+
+    override protected[this] def newSpecificBuilder(): Builder[(K, V), Map[K, V]] =
+      mapFactory.newBuilder[K, V]().mapResult(new WithDefaultMap[K, V](_, defaultValue))
+  }
 
   final class WithDefault[K, +V](underlying: Map[K, V], d: K => V) extends Map[K, V] {
     // These factory methods will lose the default value
