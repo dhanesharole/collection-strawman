@@ -31,7 +31,7 @@ trait SortedMap[K, +V]
     * @param d default value used for non-present keys
     * @return a wrapper of the map with a default value
     */
-  override def withDefaultValue[V1 >: V](d: V1): Map[K, V1] = new SortedMap.WithDefault[K, V1](this, _ => d)
+  override def withDefaultValue[V1 >: V](d: V1): SortedMap[K, V1] = new SortedMap.WithDefault[K, V1](this, _ => d)
 }
 
 trait SortedMapOps[K, +V, +CC[X, +Y] <: Map[X, Y] with SortedMapOps[X, Y, CC, _], +C <: SortedMapOps[K, V, CC, C]]

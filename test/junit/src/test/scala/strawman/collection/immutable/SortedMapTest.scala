@@ -88,6 +88,15 @@ class SortedMapTest {
     assertEquals("3 is not present in this map", numbers("odd")(3))
   }
 
+  @Test
+  def testDefaulValueIsPersistedWhenNewMapIterableIsConcatenatedToOriginalMap(): Unit = {
+    val originaMap: SortedMap[Int, String] = SortedMap.from(Map(1 -> "One", 2 -> "Two"))
+      .withDefaultValue("element missing")
+    val newMap: SortedMap[Int, String] = originaMap ++ Map(3 -> "Three")
+
+    assertEquals("element missing", newMap(4))
+  }
+
   private def defaultValueFunction: Int => String = {
     i => s"$i is not present in this map"
   }
