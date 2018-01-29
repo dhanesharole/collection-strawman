@@ -41,7 +41,7 @@ trait SortedMapOps[K, +V, +CC[X, +Y] <: Map[X, Y] with SortedMapOps[X, Y, CC, _]
 
     override def keySet: SortedSet[K] = new ImmutableKeySortedSet
 
-  /** The implementation class of the set returned by `keySet` */
+    /** The implementation class of the set returned by `keySet` */
     protected class ImmutableKeySortedSet extends SortedSet[K] with GenKeySet with GenKeySortedSet {
       def iterableFactory: IterableFactory[Set] = Set
       def sortedIterableFactory: SortedIterableFactory[SortedSet] = SortedSet
@@ -56,19 +56,19 @@ trait SortedMapOps[K, +V, +CC[X, +Y] <: Map[X, Y] with SortedMapOps[X, Y, CC, _]
       def incl(elem: K): SortedSet[K] = fromSpecificIterable(this).incl(elem)
       def excl(elem: K): SortedSet[K] = fromSpecificIterable(this).excl(elem)
     }
-  
+
     protected def mapFromIterable[K2, V2](it: collection.Iterable[(K2, V2)]): Map[K2, V2] =
       Map.from(it)
-  
+
     // We override these methods to fix their return type (which would be `Map` otherwise)
     def updated[V1 >: V](key: K, value: V1): CC[K, V1]
     @`inline` final override def +[V1 >: V](kv: (K, V1)): CC[K, V1] = updated(kv._1, kv._2)
-  
+
     override def concat[V2 >: V](xs: collection.Iterable[(K, V2)]): CC[K, V2] = {
-      var result: CC[K, V2] = coll
-      val it = xs.iterator()
-      while (it.hasNext) result = result + it.next()
-      result
+        var result: CC[K, V2] = coll
+        val it = xs.iterator()
+        while (it.hasNext) result = result + it.next()
+        result
     }
 
 }
