@@ -36,8 +36,7 @@ trait SortedMap[K, +V]
 
 trait SortedMapOps[K, +V, +CC[X, +Y] <: Map[X, Y] with SortedMapOps[X, Y, CC, _], +C <: SortedMapOps[K, V, CC, C]]
   extends MapOps[K, V, Map, C]
-    with collection.SortedMapOps[K, V, CC, C] {
-  self =>
+    with collection.SortedMapOps[K, V, CC, C] { self =>
 
   protected[this] def coll: C with CC[K, V]
 
@@ -46,24 +45,16 @@ trait SortedMapOps[K, +V, +CC[X, +Y] <: Map[X, Y] with SortedMapOps[X, Y, CC, _]
   /** The implementation class of the set returned by `keySet` */
   protected class ImmutableKeySortedSet extends SortedSet[K] with GenKeySet with GenKeySortedSet {
     def iterableFactory: IterableFactory[Set] = Set
-
     def sortedIterableFactory: SortedIterableFactory[SortedSet] = SortedSet
-
     protected[this] def sortedFromIterable[B: Ordering](it: collection.Iterable[B]): SortedSet[B] = sortedIterableFactory.from(it)
-
     protected[this] def fromSpecificIterable(coll: collection.Iterable[K]): SortedSet[K] = sortedIterableFactory.from(coll)
-
     protected[this] def newSpecificBuilder(): Builder[K, SortedSet[K]] = sortedIterableFactory.newBuilder()
-
     def rangeImpl(from: Option[K], until: Option[K]): SortedSet[K] = {
       val map = self.rangeImpl(from, until)
       new map.ImmutableKeySortedSet
     }
-
     def empty: SortedSet[K] = sortedIterableFactory.empty
-
     def incl(elem: K): SortedSet[K] = fromSpecificIterable(this).incl(elem)
-
     def excl(elem: K): SortedSet[K] = fromSpecificIterable(this).excl(elem)
   }
 
@@ -72,7 +63,6 @@ trait SortedMapOps[K, +V, +CC[X, +Y] <: Map[X, Y] with SortedMapOps[X, Y, CC, _]
 
   // We override these methods to fix their return type (which would be `Map` otherwise)
   def updated[V1 >: V](key: K, value: V1): CC[K, V1]
-
   @`inline` final override def +[V1 >: V](kv: (K, V1)): CC[K, V1] = updated(kv._1, kv._2)
 
   override def concat[V2 >: V](xs: collection.Iterable[(K, V2)]): CC[K, V2] = {
@@ -124,5 +114,4 @@ object SortedMap extends SortedMapFactory.Delegate[SortedMap](TreeMap) {
       SortedMap.newBuilder[K, V]().mapResult(new WithDefault[K, V](_, d))
     }
   }
-
 }
