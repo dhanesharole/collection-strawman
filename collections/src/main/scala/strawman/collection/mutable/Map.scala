@@ -171,22 +171,16 @@ trait MapOps[K, V, +CC[X, Y] <: MapOps[X, Y, CC, _], +C <: MapOps[K, V, CC, C]]
   */
 object Map extends MapFactory.Delegate[Map](HashMap) {
 
-  final class WithDefault[K, V](val underlying: Map[K, V], d: K => V) extends Map[K, V] with WithDefaultOps[K, V, Map[K, V]] {
+  final class WithDefault[K, V](val underlying: Map[K, V], defaultValue: K => V) extends Map[K, V] with WithDefaultOps[K, V, Map[K, V]] {
 
-    def subtractOne(elem: K): WithDefault.this.type = { underlying.subtractOne(elem); this }
-
-    def addOne(elem: (K, V)): WithDefault.this.type = { underlying.addOne(elem); this}
-
-    def empty: Map[K, V] = new WithDefault[K, V](underlying.empty, d)
-
-    def clear(): Unit = underlying.clear()
+    def empty: Map[K, V] = new WithDefault[K, V](underlying.empty, defaultValue)
 
     protected[this] def fromSpecificIterable(coll: collection.Iterable[(K, V)]): Map[K, V] = mapFactory.from(coll)
 
     protected[this] def newSpecificBuilder(): Builder[(K, V), Map[K, V]] =
-      mapFactory.newBuilder[K, V]().mapResult(new WithDefault[K, V](_, d))
+      mapFactory.newBuilder[K, V]().mapResult(new WithDefault[K, V](_, defaultValue))
 
-    override def default(key: K): V = d(key)
+    override def default(key: K): V = defaultValue(key)
   }
 }
 

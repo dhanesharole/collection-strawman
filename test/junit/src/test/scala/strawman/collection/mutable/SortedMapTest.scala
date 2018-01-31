@@ -1,9 +1,14 @@
-package strawman.collection.immutable
+package strawman.collection.mutable
+
+import java.util.NoSuchElementException
 
 import org.junit.Assert.{assertEquals, assertNotEquals}
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
+import strawman.collection.mutable.{Map, SortedMap, TreeMap}
+
+import scala.{Option, Unit}
 
 @RunWith(classOf[JUnit4])
 class SortedMapTest {
@@ -17,19 +22,22 @@ class SortedMapTest {
 
   @Test
   def testDefaultValueIsPersistedAfterAnElementIsAddedToUnderlyingMap(): Unit = {
-    val tree: SortedMap[Int, String] = SortedMap.from(Map(1 -> "One", 2 -> "Two")).withDefault(defaultValueFunction)
-    val newTree = tree + (3 -> "Three")
+    val tree: SortedMap[Int, String] = SortedMap.from(Map(1 -> "One", 2 -> "Two"))
+      .withDefault(defaultValueFunction)
 
-    assertEquals("5 is not present in this map", newTree(5))
+    tree.addOne(3 -> "Three")
+
+    assertEquals("5 is not present in this map", tree(5))
   }
 
   @Test
   def testDefaultValueIsPersistedAfterCreatingEmptyMapFromUnderlyingSortedMap(): Unit = {
-    val emptyMap: SortedMap[Int, String] = SortedMap.from(Map(1 -> "One", 2 -> "Two"))
+    val originalMap: SortedMap[Int, String] = SortedMap.from(Map(1 -> "One", 2 -> "Two"))
       .withDefault(defaultValueFunction)
-      .empty
 
-    assertEquals("1 is not present in this map", emptyMap(1))
+    val emptyMapWithDefault = originalMap.empty
+
+    assertEquals("1 is not present in this map", emptyMapWithDefault(1))
   }
 
   @Test
@@ -43,18 +51,18 @@ class SortedMapTest {
 
   @Test
   def testDefaultValueIsPersistedAfterAnElementFromUnderlyingMapIsRemoved(): Unit = {
-    val originalTreeMap : SortedMap[Int, String] = SortedMap.from(Map(1 -> "One", 2 -> "Two", 3 -> "Three"))
+    val originalTreeMap: SortedMap[Int, String] = SortedMap.from(Map(1 -> "One", 2 -> "Two", 3 -> "Three"))
       .withDefault(defaultValueFunction)
 
-    val newTreeMap = originalTreeMap - 3
+    originalTreeMap.remove(3)
 
-    assertEquals("3 is not present in this map", newTreeMap(3))
-    assertEquals(2, newTreeMap.size)
+    assertEquals("3 is not present in this map", originalTreeMap(3))
+    assertEquals(2, originalTreeMap.size)
   }
 
   @Test
   def testDefaultValueIsLostWhenNewSortedMapIsCreatedFromIterablesInOperationsLikeFlatMap(): Unit = {
-    val originalMap : SortedMap[Int, String] = SortedMap.from(Map(1 -> "One", 2 -> "Two"))
+    val originalMap: SortedMap[Int, String] = SortedMap.from(Map(1 -> "One", 2 -> "Two"))
       .withDefault(defaultValueFunction)
 
     val newTreeMap: SortedMap[String, Int] = originalMap.flatMap((kv: (Int, String)) => TreeMap(kv._2 -> kv._1))
@@ -78,23 +86,19 @@ class SortedMapTest {
     assertEquals("5 is not present in this map", evenNumbers(5))
   }
 
+  /* As mutable `SortedMap` doesn't override `concat` like immutable `SortedMap`, this behaviour is happening */
   @Test
-  def testDefaultValueIsPersistedWhenNewSpecificBuilderIsCreatedFromSortedMapInOperationsLikeGroupBy(): Unit = {
-    val numbers: Map[String, SortedMap[Int, String]] = SortedMap.from(Map(1 -> "One", 2 -> "Two", 4 -> "Four", 5 -> "Five"))
-      .withDefault(defaultValueFunction)
-      .groupBy((kv: (Int, String)) => if (kv._1 % 2 == 0) "even" else "odd")
-
-    assertEquals("6 is not present in this map", numbers("even")(6))
-    assertEquals("3 is not present in this map", numbers("odd")(3))
-  }
-
-  @Test
-  def testDefaulValueIsPersistedWhenNewMapIterableIsConcatenatedToOriginalMap(): Unit = {
-    val originaMap: SortedMap[Int, String] = TreeMap(1 -> "One", 2 -> "Two")
+  def testDefaulValueIsNotPersistedWhenNewMapIterableIsConcatenatedToOriginalMap(): Unit = {
+    val originaMap: SortedMap[Int, String] = SortedMap.from(Map(1 -> "One", 2 -> "Two"))
       .withDefaultValue("element missing")
+
     val newMap: SortedMap[Int, String] = originaMap ++ Map(3 -> "Three")
 
-    assertEquals("element missing", newMap(4))
+    try {
+      newMap(4)
+    } catch {
+      case e: NoSuchElementException => assertEquals("key not found: 4", e.getMessage)
+    }
   }
 
   private def defaultValueFunction: Int => String = {
