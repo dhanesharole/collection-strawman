@@ -128,7 +128,7 @@ trait MapOps[K, +V, +CC[X, +Y] <: MapOps[X, Y, CC, _], +C <: MapOps[K, V, CC, C]
   */
 object Map extends MapFactory[Map] {
 
-  final class WithDefault[K, +V](val underlying: Map[K, V], defaultValue: K => V) extends Map[K, V] with WithDefaultOps[K, V, Map[K, V]] {
+  final class WithDefault[K, +V](val underlying: Map[K, V], val defaultValue: K => V) extends Map[K, V] with WithDefaultOps[K, V, Map[K, V]] {
 
     override def default(key: K): V = defaultValue(key)
 

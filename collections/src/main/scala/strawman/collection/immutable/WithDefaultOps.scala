@@ -9,7 +9,7 @@ private[immutable] trait WithDefaultOps[K, +V, +C <: Map[K, V]] { self: C =>
 
   val defaultValue: K => V
 
-  def default(key: K): V = defaultValue(key)
+  override def default(key: K): V = defaultValue(key)
 
   def mapFactory: MapFactory[Map] = underlying.mapFactory
   
