@@ -129,17 +129,17 @@ trait MapOps[K, +V, +CC[X, +Y] <: MapOps[X, Y, CC, _], +C <: MapOps[K, V, CC, C]
 object Map extends MapFactory[Map] {
 
   final class WithDefaultMap[K, +V](val underlying: Map[K, V], val defaultValue: K => V) extends Map[K, V] with WithDefaultOps[K, V, Map[K, V]] {
-    override def remove(key: K): Map[K, V] = new WithDefaultMap[K, V](underlying - key, defaultValue)
+    def remove(key: K): Map[K, V] = new WithDefaultMap[K, V](underlying - key, defaultValue)
 
-    override def updated[V1 >: V](key: K, value: V1): Map[K, V1] =
+    def updated[V1 >: V](key: K, value: V1): Map[K, V1] =
       new WithDefaultMap[K, V1](underlying.updated[V1](key, value), defaultValue)
 
-    override def empty: Map[K, V] = new WithDefaultMap[K, V](underlying.empty, defaultValue)
+    def empty: Map[K, V] = new WithDefaultMap[K, V](underlying.empty, defaultValue)
 
-    override protected[this] def fromSpecificIterable(coll: collection.Iterable[(K, V)]): Map[K, V] =
+    protected[this] def fromSpecificIterable(coll: collection.Iterable[(K, V)]): Map[K, V] =
       new WithDefaultMap[K, V](mapFactory.from(coll), defaultValue)
 
-    override protected[this] def newSpecificBuilder(): Builder[(K, V), Map[K, V]] =
+    protected[this] def newSpecificBuilder(): Builder[(K, V), Map[K, V]] =
       mapFactory.newBuilder[K, V]().mapResult(new WithDefaultMap[K, V](_, defaultValue))
   }
 
