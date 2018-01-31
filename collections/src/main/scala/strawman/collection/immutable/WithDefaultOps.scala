@@ -3,7 +3,7 @@ package strawman.collection.immutable
 import strawman.collection.{IterableFactoryLike, MapFactory}
 import scala.{Option}
 
-trait WithDefaultImmutableMapOps[K, +V, +C <: Map[K, V]] { self: C =>
+trait WithDefaultOps[K, +V, +C <: Map[K, V]] { self: C =>
   
   val underlying: C
   
