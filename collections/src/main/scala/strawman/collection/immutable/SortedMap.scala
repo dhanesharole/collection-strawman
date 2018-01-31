@@ -87,6 +87,17 @@ object SortedMap extends SortedMapFactory.Delegate[SortedMap](TreeMap) {
 
     def empty: WithDefault[K, V] = new WithDefault[K, V](underlying.empty, defaultValue)
 
+    def mapFactory: MapFactory[Map] = underlying.mapFactory
+
+    def get(key: K): Option[V] = underlying.get(key)
+
+    def iterableFactory: IterableFactoryLike[Iterable] = underlying.iterableFactory
+
+    def iterator(): strawman.collection.Iterator[(K, V)] = underlying.iterator()
+
+    override protected[this] def mapFromIterable[K2, V2](it: strawman.collection.Iterable[(K2, V2)]): Map[K2, V2] =
+      underlying.mapFactory.from(it)
+
     implicit def ordering: Ordering[K] = underlying.ordering
 
     def rangeImpl(from: Option[K], until: Option[K]): WithDefault[K, V] =

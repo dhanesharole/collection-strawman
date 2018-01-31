@@ -128,22 +128,37 @@ trait MapOps[K, +V, +CC[X, +Y] <: MapOps[X, Y, CC, _], +C <: MapOps[K, V, CC, C]
   */
 object Map extends MapFactory[Map] {
 
-  final class WithDefault[K, +V](val underlying: Map[K, V], val defaultValue: K => V) extends Map[K, V] with WithDefaultOps[K, V, Map[K, V]] {
+  object WithDefault extends MapFactory.Delegate[Map](HashMap)
+
+  final class WithDefault[K, +V](val underlying: Map[K, V], val defaultValue: K => V)
+    extends Map[K, V]
+      with WithDefaultOps[K, V, Map[K, V]] {
 
     override def default(key: K): V = defaultValue(key)
 
-    def remove(key: K): Map[K, V] = new WithDefault[K, V](underlying - key, defaultValue)
+    def remove(key: K): Map.WithDefault[K, V] = new WithDefault[K, V](underlying - key, defaultValue)
 
-    def updated[V1 >: V](key: K, value: V1): Map[K, V1] =
+    def updated[V1 >: V](key: K, value: V1): Map.WithDefault[K, V1] =
       new WithDefault[K, V1](underlying.updated[V1](key, value), defaultValue)
 
-    def empty: Map[K, V] = new WithDefault[K, V](underlying.empty, defaultValue)
+    def empty: Map.WithDefault[K, V] = new WithDefault[K, V](underlying.empty, defaultValue)
 
-    protected[this] def fromSpecificIterable(coll: collection.Iterable[(K, V)]): Map[K, V] =
+    protected[this] def fromSpecificIterable(coll: collection.Iterable[(K, V)]): Map.WithDefault[K, V] =
       new WithDefault[K, V](mapFactory.from(coll), defaultValue)
 
-    protected[this] def newSpecificBuilder(): Builder[(K, V), Map[K, V]] =
+    protected[this] def newSpecificBuilder(): Builder[(K, V), Map.WithDefault[K, V]] =
       mapFactory.newBuilder[K, V]().mapResult(new WithDefault[K, V](_, defaultValue))
+
+    override def mapFactory: MapFactory[Map] = WithDefault
+
+    override def get(key: K): Option[V] = underlying.get(key)
+
+    override def iterableFactory: IterableFactoryLike[Iterable] = underlying.iterableFactory
+
+    override def iterator(): strawman.collection.Iterator[(K, V)] = underlying.iterator()
+
+    override protected[this] def mapFromIterable[K2, V2](it: strawman.collection.Iterable[(K2, V2)]): Map[K2, V2] =
+      Map.from[K2, V2](it)
   }
 
   def empty[K, V]: Map[K, V] = EmptyMap.asInstanceOf[Map[K, V]]
