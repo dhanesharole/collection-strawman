@@ -170,33 +170,23 @@ trait MapOps[K, V, +CC[X, Y] <: MapOps[X, Y, CC, _], +C <: MapOps[K, V, CC, C]]
   * @define Coll `mutable.Map`
   */
 object Map extends MapFactory.Delegate[Map](HashMap) {
-  final class WithDefault[K, V](underlying: Map[K, V], d: K => V) extends Map[K, V] {
-    // These factory methods will lose the default value
-    override def iterableFactory = underlying.iterableFactory
-    def mapFactory: MapFactory[Map] = underlying.mapFactory
-    protected[this] def mapFromIterable[K2, V2](it: collection.Iterable[(K2, V2)]): Map[K2,V2] = mapFactory.from(it)
 
-    // Specific building will keep the default but may lose the precise underlying type because our own V can be
-    // a supertype of the underlying collection's V so we cannot rebuild with potentially new values that are not
-    // valid for the underlying collection.
-    protected[this] def fromSpecificIterable(coll: collection.Iterable[(K, V)]): Map[K,V] = new WithDefault[K, V](mapFactory.from(coll), d)
-    protected[this] def newSpecificBuilder(): mutable.Builder[(K, V), Map[K,V]] =
-      mapFactory.newBuilder[K, V]().mapResult(new WithDefault[K, V](_, d))
-    override def size = underlying.size
-    def get(key: K) = underlying.get(key)
-    def iterator() = underlying.iterator()
-    override def default(key: K): V = d(key)
-    override def empty = new WithDefault(underlying.empty, d)
+  final class WithDefault[K, V](val underlying: Map[K, V], d: K => V) extends Map[K, V] with WithDefaultOps[K, V, Map[K, V]] {
+
+    def subtractOne(elem: K): WithDefault.this.type = { underlying.subtractOne(elem); this }
+
+    def addOne(elem: (K, V)): WithDefault.this.type = { underlying.addOne(elem); this}
+
+    def empty: Map[K, V] = new WithDefault[K, V](underlying.empty, d)
 
     def clear(): Unit = underlying.clear()
-    def addOne(elem: (K, V)): this.type = { underlying.addOne(elem); this }
-    def subtractOne(elem: K): this.type = { underlying.subtractOne(elem); this }
-    override def put(key: K, value: V): Option[V] = underlying.put(key, value)
-    override def update(key: K, value: V): Unit = underlying.update(key, value)
-    override def remove(key: K): Option[V] = underlying.remove(key)
 
-    override def withDefault(d: K => V): Map[K, V] = new WithDefault[K, V](underlying, d)
-    override def withDefaultValue(d: V): Map[K, V] = new WithDefault[K, V](underlying, x => d)
+    protected[this] def fromSpecificIterable(coll: collection.Iterable[(K, V)]): Map[K, V] = mapFactory.from(coll)
+
+    protected[this] def newSpecificBuilder(): Builder[(K, V), Map[K, V]] =
+      mapFactory.newBuilder[K, V]().mapResult(new WithDefault[K, V](_, d))
+
+    override def default(key: K): V = d(key)
   }
 }
 
