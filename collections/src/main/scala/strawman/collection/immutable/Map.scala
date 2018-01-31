@@ -22,7 +22,7 @@ trait Map[K, +V]
     *  @param d     the function mapping keys to values, used for non-present keys
     *  @return      a wrapper of the map with a default value
     */
-  def withDefault[V1 >: V](d: K => V1): Map[K, V1] = new Map.WithDefaultMap[K, V1](this, d)
+  def withDefault[V1 >: V](d: K => V1): Map[K, V1] = new Map.WithDefault[K, V1](this, d)
 
   /** The same map with a given default value.
     *  Note: The default is only used for `apply`. Other methods like `get`, `contains`, `iterator`, `keys`, etc.
@@ -33,7 +33,7 @@ trait Map[K, +V]
     *  @param d     default value used for non-present keys
     *  @return      a wrapper of the map with a default value
     */
-  def withDefaultValue[V1 >: V](d: V1): Map[K, V1] = new Map.WithDefaultMap[K, V1](this, x => d)
+  def withDefaultValue[V1 >: V](d: V1): Map[K, V1] = new Map.WithDefault[K, V1](this, x => d)
 
   override final def toMap[K2, V2](implicit ev: (K, V) <:< (K2, V2)): Map[K2, V2] = this.asInstanceOf[Map[K2, V2]]
 
@@ -128,22 +128,22 @@ trait MapOps[K, +V, +CC[X, +Y] <: MapOps[X, Y, CC, _], +C <: MapOps[K, V, CC, C]
   */
 object Map extends MapFactory[Map] {
 
-  final class WithDefaultMap[K, +V](val underlying: Map[K, V], defaultValue: K => V) extends Map[K, V] with WithDefaultOps[K, V, Map[K, V]] {
+  final class WithDefault[K, +V](val underlying: Map[K, V], defaultValue: K => V) extends Map[K, V] with WithDefaultOps[K, V, Map[K, V]] {
 
     override def default(key: K): V = defaultValue(key)
 
-    def remove(key: K): Map[K, V] = new WithDefaultMap[K, V](underlying - key, defaultValue)
+    def remove(key: K): Map[K, V] = new WithDefault[K, V](underlying - key, defaultValue)
 
     def updated[V1 >: V](key: K, value: V1): Map[K, V1] =
-      new WithDefaultMap[K, V1](underlying.updated[V1](key, value), defaultValue)
+      new WithDefault[K, V1](underlying.updated[V1](key, value), defaultValue)
 
-    def empty: Map[K, V] = new WithDefaultMap[K, V](underlying.empty, defaultValue)
+    def empty: Map[K, V] = new WithDefault[K, V](underlying.empty, defaultValue)
 
     protected[this] def fromSpecificIterable(coll: collection.Iterable[(K, V)]): Map[K, V] =
-      new WithDefaultMap[K, V](mapFactory.from(coll), defaultValue)
+      new WithDefault[K, V](mapFactory.from(coll), defaultValue)
 
     protected[this] def newSpecificBuilder(): Builder[(K, V), Map[K, V]] =
-      mapFactory.newBuilder[K, V]().mapResult(new WithDefaultMap[K, V](_, defaultValue))
+      mapFactory.newBuilder[K, V]().mapResult(new WithDefault[K, V](_, defaultValue))
   }
 
   def empty[K, V]: Map[K, V] = EmptyMap.asInstanceOf[Map[K, V]]
