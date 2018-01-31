@@ -74,7 +74,9 @@ trait SortedMapOps[K, +V, +CC[X, +Y] <: Map[X, Y] with SortedMapOps[X, Y, CC, _]
 
 object SortedMap extends SortedMapFactory.Delegate[SortedMap](TreeMap) {
 
-  final class SortedMapWithDefault[K, +V](val underlying: SortedMap[K, V], val defaultValue: K => V) extends SortedMap[K, V] with WithDefaultOps[K, V, SortedMap[K, V]] {
+  final class SortedMapWithDefault[K, +V](val underlying: SortedMap[K, V], defaultValue: K => V) extends SortedMap[K, V] with WithDefaultOps[K, V, SortedMap[K, V]] {
+
+    override def default(key: K): V = defaultValue(key)
 
     def updated[V1 >: V](key: K, value: V1): SortedMap[K, V1] =
       new SortedMapWithDefault[K, V1](underlying.updated[V1](key, value), defaultValue)
