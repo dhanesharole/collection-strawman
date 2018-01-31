@@ -19,7 +19,7 @@ trait SortedMap[K, +V]
     *  @param d     the function mapping keys to values, used for non-present keys
     *  @return      a wrapper of the map with a default value
     */
-  override def withDefault[V1 >: V](d: K => V1): SortedMap[K, V1] = new SortedMap.WithDefault[K, V1](this, d)
+  override def withDefault[V1 >: V](d: K => V1): SortedMap.WithDefault[K, V1] = new SortedMap.WithDefault[K, V1](this, d)
 
   /** The same map with a given default value.
     * Note: The default is only used for `apply`. Other methods like `get`, `contains`, `iterator`, `keys`, etc.
@@ -30,7 +30,7 @@ trait SortedMap[K, +V]
     * @param d default value used for non-present keys
     * @return a wrapper of the map with a default value
     */
-  override def withDefaultValue[V1 >: V](d: V1): SortedMap[K, V1] = new SortedMap.WithDefault[K, V1](this, _ => d)
+  override def withDefaultValue[V1 >: V](d: V1): SortedMap.WithDefault[K, V1] = new SortedMap.WithDefault[K, V1](this, _ => d)
 }
 
 trait SortedMapOps[K, +V, +CC[X, +Y] <: Map[X, Y] with SortedMapOps[X, Y, CC, _], +C <: SortedMapOps[K, V, CC, C]]
@@ -74,37 +74,37 @@ trait SortedMapOps[K, +V, +CC[X, +Y] <: Map[X, Y] with SortedMapOps[X, Y, CC, _]
 
 object SortedMap extends SortedMapFactory.Delegate[SortedMap](TreeMap) {
 
-  final class WithDefault[K, +V](val underlying: SortedMap[K, V], defaultValue: K => V) extends SortedMap[K, V] with WithDefaultOps[K, V, SortedMap[K, V]] {
+  final class WithDefault[K, +V](val underlying: SortedMap[K, V], val defaultValue: K => V)
+    extends SortedMap[K, V]
+      with SortedMapOps[K, V, SortedMap, SortedMap.WithDefault[K, V]]
+      with WithDefaultOps[K, V, SortedMap[K, V]] {
 
-    override def default(key: K): V = defaultValue(key)
+    def updated[V1 >: V](key: K, value: V1): WithDefault[K, V1] =
+      new WithDefault[K, V1](underlying.updated(key, value), defaultValue)
 
-    def updated[V1 >: V](key: K, value: V1): SortedMap[K, V1] =
-      new WithDefault[K, V1](underlying.updated[V1](key, value), defaultValue)
+    def remove(key: K): WithDefault[K, V] =
+      new WithDefault[K, V](underlying.remove(key), defaultValue )
 
-    def empty: SortedMap[K, V] = new WithDefault[K, V](underlying.empty, defaultValue)
-
-    def remove(key: K): SortedMap[K, V] = new WithDefault[K, V](underlying - key, defaultValue)
-
-    protected[this] def fromSpecificIterable(coll: strawman.collection.Iterable[(K, V)]): SortedMap[K, V] =
-      new WithDefault[K, V](SortedMap.from(coll), defaultValue)
-
-    protected[this] def newSpecificBuilder(): Builder[(K, V), SortedMap[K, V]] = {
-      SortedMap.newBuilder[K, V]().mapResult(new WithDefault[K, V](_, defaultValue))
-    }
+    def empty: WithDefault[K, V] = new WithDefault[K, V](underlying.empty, defaultValue)
 
     implicit def ordering: Ordering[K] = underlying.ordering
 
-    def rangeImpl(from: Option[K], until: Option[K]): SortedMap[K, V] =
+    def rangeImpl(from: Option[K], until: Option[K]): WithDefault[K, V] =
       new WithDefault[K, V](underlying.rangeImpl(from, until), defaultValue)
 
-    def sortedMapFactory: SortedMapFactory[SortedMap] = underlying.sortedMapFactory
+    protected[this] def fromSpecificIterable(coll: collection.Iterable[(K, V)]): WithDefault[K, V] =
+      new WithDefault[K, V](SortedMap.from(coll), defaultValue)
 
-    protected[this] def sortedMapFromIterable[K2, V2](it: strawman.collection.Iterable[(K2, V2)])(implicit ordering: Ordering[K2]): SortedMap[K2, V2] =
+    protected[this] def newSpecificBuilder(): Builder[(K, V), WithDefault[K, V]] =
+      SortedMap.newBuilder[K, V]().mapResult(new WithDefault[K, V](_, defaultValue))
+
+    def sortedMapFactory = SortedMap
+
+    override protected[this] def sortedMapFromIterable[K2, V2](it: collection.Iterable[(K2, V2)])(implicit ordering: Ordering[K2]): SortedMap[K2, V2] =
       SortedMap.from(it)
 
-    def iteratorFrom(start: K): strawman.collection.Iterator[(K, V)] = underlying.iteratorFrom(start)
+    def iteratorFrom(start: K): Iterator[(K, V)] = underlying.iteratorFrom(start)
 
-    def keysIteratorFrom(start: K): strawman.collection.Iterator[K] = underlying.keysIteratorFrom(start)
-
+    def keysIteratorFrom(start: K): Iterator[K] = underlying.keysIteratorFrom(start)
   }
 }

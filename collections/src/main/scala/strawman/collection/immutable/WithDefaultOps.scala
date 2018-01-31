@@ -4,8 +4,12 @@ import strawman.collection.{IterableFactoryLike, MapFactory}
 import scala.{Option}
 
 private[immutable] trait WithDefaultOps[K, +V, +C <: Map[K, V]] { self: C =>
-  
+
   val underlying: C
+
+  val defaultValue: K => V
+
+  def default(key: K): V = defaultValue(key)
 
   def mapFactory: MapFactory[Map] = underlying.mapFactory
   
