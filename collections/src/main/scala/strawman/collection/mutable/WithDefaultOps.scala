@@ -21,7 +21,7 @@ private[mutable] trait WithDefaultOps[K, V, C <: Map[K, V]] { self: C =>
   
   def iterator(): strawman.collection.Iterator[(K, V)] = underlying.iterator()
 
-  override def iterableFactory: Iterable.type = underlying.iterableFactory
+  override def iterableFactory = underlying.iterableFactory
 
   override def mapFromIterable[K2, V2](it: strawman.collection.Iterable[(K2, V2)]): Map[K2, V2] =
     underlying.mapFactory.from(it)
