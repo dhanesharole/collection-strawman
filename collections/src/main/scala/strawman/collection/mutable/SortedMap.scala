@@ -70,5 +70,11 @@ object SortedMap extends SortedMapFactory.Delegate[SortedMap](TreeMap) {
       new WithDefault[K, V](underlying.rangeImpl(from, until), defaultValue)
 
     override def default(key: K): V = defaultValue(key)
+
+    /* Override concat method here so that when new Iterable(K, V2) is concatenated to original SortedMap,
+    default value is persisted.
+     */
+    override def concat[V2 >: V](xs: collection.Iterable[(K, V2)]): SortedMap[K, V2] =
+      new WithDefault[K, V2](SortedMap.from(xs ++ this), defaultValue)
   }
 }

@@ -86,19 +86,14 @@ class SortedMapTest {
     assertEquals("5 is not present in this map", evenNumbers(5))
   }
 
-  /* As mutable `SortedMap` doesn't override `concat` like immutable `SortedMap`, this behaviour is happening */
   @Test
-  def testDefaulValueIsNotPersistedWhenNewMapIterableIsConcatenatedToOriginalMap(): Unit = {
+  def testDefaulValueIsPersistedWhenNewMapIterableIsConcatenatedToOriginalMap(): Unit = {
     val originaMap: SortedMap[Int, String] = SortedMap.from(Map(1 -> "One", 2 -> "Two"))
       .withDefaultValue("element missing")
 
-    val newMap: SortedMap[Int, String] = originaMap ++ Map(3 -> "Three")
+    val newMap: SortedMap[Int, String] = originaMap ++ SortedMap.from(Map(3 -> "Three")).withDefaultValue("foobar")
 
-    try {
-      newMap(4)
-    } catch {
-      case e: NoSuchElementException => assertEquals("key not found: 4", e.getMessage)
-    }
+    assertEquals("element missing", newMap(4))
   }
 
   private def defaultValueFunction: Int => String = {
