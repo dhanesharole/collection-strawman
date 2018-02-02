@@ -15,7 +15,7 @@ trait SortedMapWithDefault[K, +V]
   def iteratorFrom(start: K): strawman.collection.Iterator[(K, V)] = underlying.iteratorFrom(start)
 
   protected[this] def sortedMapFromIterable[K2, V2](it: strawman.collection.Iterable[(K2, V2)])(implicit ordering: Ordering[K2]): SortedMap[K2, V2] =
-  SortedMap.from(it)
+    underlying.sortedMapFactory.from(it)
 
   def keysIteratorFrom(start: K): strawman.collection.Iterator[K] = underlying.keysIteratorFrom(start)
 
