@@ -8,11 +8,15 @@ import scala.{Option, Ordering}
 trait MapWithDefault[K, +V]
   extends Map[K, V]
     with MapOps[K, V, Map, MapWithDefault[K, V]]
-    with MapWithDefaultOps[K, V, MapWithDefault] {
+    with WithDefault[K, V] {
+
+  val defaultValue: K => V
 
   val underlying: Map[K, V]
 
   def get(key: K): Option[V] = underlying.get(key)
+
+  override def default(key: K): V = defaultValue(key)
 
   def iterableFactory: IterableFactoryLike[Iterable] = underlying.iterableFactory
 

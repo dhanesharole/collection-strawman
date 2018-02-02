@@ -11,7 +11,8 @@ import scala.Predef.<:<
 trait Map[K, +V]
   extends Iterable[(K, V)]
      with collection.Map[K, V]
-     with MapOps[K, V, Map, Map[K, V]] {
+     with MapOps[K, V, Map, Map[K, V]]
+     with WithDefaultOps[K, V]{
 
   override final def toMap[K2, V2](implicit ev: (K, V) <:< (K2, V2)): Map[K2, V2] = this.asInstanceOf[Map[K2, V2]]
 
