@@ -1,28 +1,31 @@
 package strawman.collection.mutable
 
-import strawman.collection.mutable.SortedMap.WithDefault
 import strawman.collection.{IterableFactoryLike, MapFactory}
 
 import scala.{ Option, Unit }
 
-private[mutable] trait WithDefaultOps[K, V, C <: Map[K, V]] { self: C =>
+private[mutable] trait WithDefault[K, V]
+private[mutable] trait WithDefaultOps[K, V] {
 
-  def subtractOne(elem: K): this.type = { underlying.subtractOne(elem); this }
+  /** The same map with a given default function.
+    *  Note: The default is only used for `apply`. Other methods like `get`, `contains`, `iterator`, `keys`, etc.
+    *  are not affected by `withDefault`.
+    *
+    *  Invoking transformer methods (e.g. `map`) will not preserve the default value.
+    *
+    *  @param d     the function mapping keys to values, used for non-present keys
+    *  @return      a wrapper of the map with a default value
+    */
+  def withDefault(d: K => V): WithDefault[K, V]
 
-  def addOne(elem: (K, V)): this.type = { underlying.addOne(elem); this}
-
-  def clear(): Unit = underlying.clear()
-
-  val underlying: C
-
-  def mapFactory: MapFactory[Map] = underlying.mapFactory
-  
-  def get(key: K): Option[V] = underlying.get(key)
-  
-  def iterator(): strawman.collection.Iterator[(K, V)] = underlying.iterator()
-
-  override def iterableFactory = underlying.iterableFactory
-
-  override def mapFromIterable[K2, V2](it: strawman.collection.Iterable[(K2, V2)]): Map[K2, V2] =
-    underlying.mapFactory.from(it)
+  /** The same map with a given default value.
+    *  Note: The default is only used for `apply`. Other methods like `get`, `contains`, `iterator`, `keys`, etc.
+    *  are not affected by `withDefaultValue`.
+    *
+    *  Invoking transformer methods (e.g. `map`) will not preserve the default value.
+    *
+    *  @param d     default value used for non-present keys
+    *  @return      a wrapper of the map with a default value
+    */
+  def withDefaultValue(d: V): WithDefault[K, V]
 }

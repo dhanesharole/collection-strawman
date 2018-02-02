@@ -11,7 +11,8 @@ trait Map[K, V]
   extends Iterable[(K, V)]
     with collection.Map[K, V]
     with MapOps[K, V, Map, Map[K, V]]
-    with Shrinkable[K] {
+    with Shrinkable[K]
+    with WithDefaultOps[K, V]{
 
   /*
   //TODO consider keeping `remove` because it returns the removed entry
@@ -32,7 +33,7 @@ trait Map[K, V]
     *  @param d     the function mapping keys to values, used for non-present keys
     *  @return      a wrapper of the map with a default value
     */
-  def withDefault(d: K => V): Map[K, V] = new Map.WithDefault[K, V](this, d)
+  def withDefault(d: K => V): MapWithDefault[K, V] = new MapWithDefaultImpl[K, V](this, d)
 
   /** The same map with a given default value.
     *  Note: The default is only used for `apply`. Other methods like `get`, `contains`, `iterator`, `keys`, etc.
@@ -43,7 +44,7 @@ trait Map[K, V]
     *  @param d     default value used for non-present keys
     *  @return      a wrapper of the map with a default value
     */
-  def withDefaultValue(d: V): Map[K, V] = new Map.WithDefault[K, V](this, x => d)
+  def withDefaultValue(d: V): MapWithDefault[K, V] = new MapWithDefaultImpl[K, V](this, x => d)
 }
 
 /**
@@ -169,20 +170,7 @@ trait MapOps[K, V, +CC[X, Y] <: MapOps[X, Y, CC, _], +C <: MapOps[K, V, CC, C]]
   * @define coll mutable map
   * @define Coll `mutable.Map`
   */
-object Map extends MapFactory.Delegate[Map](HashMap) {
-
-  final class WithDefault[K, V](val underlying: Map[K, V], defaultValue: K => V) extends Map[K, V] with WithDefaultOps[K, V, Map[K, V]] {
-
-    def empty: Map[K, V] = new WithDefault[K, V](underlying.empty, defaultValue)
-
-    protected[this] def fromSpecificIterable(coll: collection.Iterable[(K, V)]): Map[K, V] = mapFactory.from(coll)
-
-    protected[this] def newSpecificBuilder(): Builder[(K, V), Map[K, V]] =
-      mapFactory.newBuilder[K, V]().mapResult(new WithDefault[K, V](_, defaultValue))
-
-    override def default(key: K): V = defaultValue(key)
-  }
-}
+object Map extends MapFactory.Delegate[Map](HashMap)
 
 /** Explicit instantiation of the `Map` trait to reduce class file size in subclasses. */
 abstract class AbstractMap[A, B] extends strawman.collection.AbstractMap[A, B] with Map[A, B]
