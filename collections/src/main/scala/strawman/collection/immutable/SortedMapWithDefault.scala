@@ -36,10 +36,10 @@ final class SortedMapWithDefaultImpl[K, +V](val underlying: SortedMap[K, V], val
   def rangeImpl(from: Option[K], until: Option[K]): SortedMapWithDefault[K, V] =
     new SortedMapWithDefaultImpl[K, V](underlying.rangeImpl(from, until), defaultValue)
 
-  override protected[this] def fromSpecificIterable(coll: strawman.collection.Iterable[(K, V)]): SortedMapWithDefaultImpl[K, V] =
+  protected[this] def fromSpecificIterable(coll: strawman.collection.Iterable[(K, V)]): SortedMapWithDefaultImpl[K, V] =
     new SortedMapWithDefaultImpl[K, V](sortedMapFactory.from(coll), defaultValue)
 
-  override protected[this] def newSpecificBuilder(): Builder[(K, V), SortedMapWithDefault[K, V]] =
+  protected[this] def newSpecificBuilder(): Builder[(K, V), SortedMapWithDefault[K, V]] =
     SortedMap.newBuilder().mapResult((p: SortedMap[K, V]) => new SortedMapWithDefaultImpl[K, V](p, defaultValue))
 
 }
