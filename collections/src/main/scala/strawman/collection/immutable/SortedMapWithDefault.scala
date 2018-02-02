@@ -15,7 +15,7 @@ trait SortedMapWithDefault[K, +V]
   def iteratorFrom(start: K): strawman.collection.Iterator[(K, V)] = underlying.iteratorFrom(start)
 
   protected[this] def sortedMapFromIterable[K2, V2](it: strawman.collection.Iterable[(K2, V2)])(implicit ordering: Ordering[K2]): SortedMap[K2, V2] =
-    underlying.sortedMapFactory.from(it)
+    sortedMapFactory.from(it)
 
   def keysIteratorFrom(start: K): strawman.collection.Iterator[K] = underlying.keysIteratorFrom(start)
 
@@ -37,7 +37,7 @@ final class SortedMapWithDefaultImpl[K, +V](val underlying: SortedMap[K, V], val
     new SortedMapWithDefaultImpl[K, V](underlying.rangeImpl(from, until), defaultValue)
 
   override protected[this] def fromSpecificIterable(coll: strawman.collection.Iterable[(K, V)]): SortedMapWithDefaultImpl[K, V] =
-    new SortedMapWithDefaultImpl[K, V](SortedMap.from(coll), defaultValue)
+    new SortedMapWithDefaultImpl[K, V](sortedMapFactory.from(coll), defaultValue)
 
   override protected[this] def newSpecificBuilder(): Builder[(K, V), SortedMapWithDefault[K, V]] =
     SortedMap.newBuilder().mapResult((p: SortedMap[K, V]) => new SortedMapWithDefaultImpl[K, V](p, defaultValue))

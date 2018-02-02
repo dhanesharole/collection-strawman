@@ -36,10 +36,10 @@ final class MapWithDefaultImpl[K, +V](val underlying: Map[K, V], val defaultValu
   def empty: MapWithDefault[K, V] = new MapWithDefaultImpl[K, V](underlying.empty, defaultValue)
 
   protected[this] def mapFromIterable[K2, V2](it: collection.Iterable[(K2, V2)]): Map[K2, V2] =
-    underlying.mapFactory.from(it)
+    mapFactory.from(it)
 
   protected[this] def fromSpecificIterable(coll: collection.Iterable[(K, V)]): MapWithDefault[K, V] =
-    new MapWithDefaultImpl[K, V](Map.from(coll), defaultValue)
+    new MapWithDefaultImpl[K, V](mapFactory.from(coll), defaultValue)
 
   protected[this] def newSpecificBuilder(): Builder[(K, V), MapWithDefault[K, V]] =
     Map.newBuilder().mapResult((p: Map[K, V]) => new MapWithDefaultImpl[K, V](p, defaultValue))
