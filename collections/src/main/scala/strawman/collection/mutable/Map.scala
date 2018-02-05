@@ -12,8 +12,7 @@ trait Map[K, V]
     with collection.Map[K, V]
     with MapOps[K, V, Map, Map[K, V]]
     with Growable[(K, V)]
-    with Shrinkable[K]
-    with WithDefaultOps[K, V]{
+    with Shrinkable[K] {
 
   /*
   //TODO consider keeping `remove` because it returns the removed entry
@@ -34,7 +33,7 @@ trait Map[K, V]
     *  @param d     the function mapping keys to values, used for non-present keys
     *  @return      a wrapper of the map with a default value
     */
-  def withDefault(d: K => V): MapWithDefault[K, V] = new MapWithDefaultImpl[K, V](this, d)
+  def withDefault(d: K => V): Map.WithDefault[K, V] = new Map.WithDefault[K, V](this, d)
 
   /** The same map with a given default value.
     *  Note: The default is only used for `apply`. Other methods like `get`, `contains`, `iterator`, `keys`, etc.
@@ -45,7 +44,7 @@ trait Map[K, V]
     *  @param d     default value used for non-present keys
     *  @return      a wrapper of the map with a default value
     */
-  def withDefaultValue(d: V): MapWithDefault[K, V] = new MapWithDefaultImpl[K, V](this, x => d)
+  def withDefaultValue(d: V): Map.WithDefault[K, V] = new Map.WithDefault[K, V](this, x => d)
 }
 
 /**
@@ -172,7 +171,38 @@ trait MapOps[K, V, +CC[X, Y] <: MapOps[X, Y, CC, _], +C <: MapOps[K, V, CC, C]]
   * @define coll mutable map
   * @define Coll `mutable.Map`
   */
-object Map extends MapFactory.Delegate[Map](HashMap)
+object Map extends MapFactory.Delegate[Map](HashMap) {
+
+  class WithDefault[K, V](val underlying: Map[K, V], val defaultValue: K => V)
+    extends Map[K, V] with MapOps[K, V, Map, WithDefault[K, V]]{
+
+    override def default(key: K): V = defaultValue(key)
+
+    def iterator(): strawman.collection.Iterator[(K, V)] = underlying.iterator()
+
+    def mapFactory: MapFactory[Map] = underlying.mapFactory
+
+    def clear(): Unit = underlying.clear()
+
+    def get(key: K): Option[V] = underlying.get(key)
+
+    def subtractOne(elem: K): WithDefault.this.type = { underlying.subtractOne(elem); this }
+
+    def addOne(elem: (K, V)): WithDefault.this.type = { underlying.addOne(elem); this }
+
+    def empty: WithDefault[K, V] = new WithDefault[K, V](underlying.empty, defaultValue)
+
+    protected[this] def fromSpecificIterable(coll: strawman.collection.Iterable[(K, V)]): WithDefault[K, V] =
+      new WithDefault[K, V](mapFactory.from(coll), defaultValue)
+
+    protected[this] def newSpecificBuilder(): Builder[(K, V), WithDefault[K, V]] =
+      Map.newBuilder().mapResult((p: Map[K, V]) => new WithDefault[K, V](p, defaultValue))
+
+    protected[this] def mapFromIterable[K2, V2](it: strawman.collection.Iterable[(K2, V2)]): Map[K2, V2] =
+      mapFactory.from(it)
+  }
+
+}
 
 /** Explicit instantiation of the `Map` trait to reduce class file size in subclasses. */
 abstract class AbstractMap[A, B] extends strawman.collection.AbstractMap[A, B] with Map[A, B]
