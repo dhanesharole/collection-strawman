@@ -8,7 +8,7 @@ import scala.Int._
 import strawman.collection
 import strawman.collection.immutable.{List, Nil, ::}
 import scala.annotation.tailrec
-import java.lang.IndexOutOfBoundsException
+import java.lang.{IllegalArgumentException, IndexOutOfBoundsException}
 import scala.Predef.{assert, intWrapper}
 
 /** A `Buffer` implementation backed by a list. It provides constant time
@@ -182,7 +182,7 @@ class ListBuffer[A]
     this
   }
 
-  private def insertAfter(p: Predecessor[A], it: Iterator[A]) = {
+  private def insertAfter(p: Predecessor[A], it: Iterator[A]): Predecessor[A] = {
     var prev = p
     val follow = getNext(prev)
     while (it.hasNext) {
@@ -191,6 +191,7 @@ class ListBuffer[A]
       setNext(prev, next)
       prev = next
     }
+    prev
   }
 
   def insertAll(idx: Int, elems: IterableOnce[A]): Unit = {
@@ -207,18 +208,20 @@ class ListBuffer[A]
   def remove(idx: Int): A = {
     ensureUnaliased()
     if (idx < 0 || idx >= len) throw new IndexOutOfBoundsException
-    len -= 1
     val p = locate(idx)
     val nx = getNext(p)
     setNext(p, nx.tail)
+    len -= 1
     nx.head
   }
 
-  def remove(idx: Int, n: Int): Unit =
-    if (n > 0) {
+  def remove(idx: Int, count: Int): Unit =
+    if (count > 0) {
       ensureUnaliased()
-      if (idx < 0 || idx + n > len) throw new IndexOutOfBoundsException
-      removeAfter(locate(idx), n)
+      if (idx < 0 || idx + count > len) throw new IndexOutOfBoundsException
+      removeAfter(locate(idx), count)
+    } else if (count < 0) {
+      throw new IllegalArgumentException("removing negative number of elements: " + count)
     }
 
   private def removeAfter(prev: Predecessor[A], n: Int) = {
@@ -239,13 +242,13 @@ class ListBuffer[A]
 
   def flatMapInPlace(f: A => IterableOnce[A]): this.type = {
     ensureUnaliased()
-    val prev: Predecessor[A] = null
+    var prev: Predecessor[A] = null
     var cur: List[A] = first
     while (!cur.isEmpty) {
       val follow = cur.tail
       setNext(prev, follow)
       len -= 1
-      insertAfter(prev, f(cur.head).iterator())
+      prev = insertAfter(prev, f(cur.head).iterator())
       cur = follow
     }
     this
@@ -260,8 +263,9 @@ class ListBuffer[A]
       if (!p(cur.head)) {
         setNext(prev, follow)
         len -= 1
+      } else {
+        prev = cur.asInstanceOf[Predecessor[A]]
       }
-      prev = cur.asInstanceOf[Predecessor[A]]
       cur = follow
     }
     this
