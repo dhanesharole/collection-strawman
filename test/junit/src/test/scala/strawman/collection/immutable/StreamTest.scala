@@ -131,4 +131,54 @@ class StreamTest {
     val s = f #:: f #:: f #:: Stream.empty
     assertEquals(1, i)
   }
+
+  @Test
+  def testStreamToStringWhenHeadAndTailBothAreNotEvaluated = {
+    val l = Stream(1, 2, 3, 4, 5)
+    assertEquals("Stream(1, ?)", l.toString)
+  }
+
+  @Test
+  def testStreamToStringWhenOnlyHeadIsEvaluated = {
+    val l = Stream(1, 2, 3, 4, 5)
+    l.head
+    assertEquals("Stream(1, ?)", l.toString)
+  }
+
+  @Test
+  def testStreamToStringWhenHeadAndTailIsEvaluated = {
+    val l = Stream(1, 2, 3, 4, 5)
+    l.head
+    l.tail
+    assertEquals("Stream(1, 2, ?)", l.toString)
+  }
+
+  @Test
+  def testStreamToStringWhenHeadAndTailHeadIsEvaluated = {
+    val l = Stream(1, 2, 3, 4, 5)
+    l.head
+    l.tail.head
+    assertEquals("Stream(1, 2, ?)", l.toString)
+  }
+
+  @Test
+  def testStreamToStringWhenHeadIsNotEvaluatedAndOnlyTailIsEvaluated = {
+    val l = Stream(1, 2, 3, 4, 5)
+    l.tail
+    assertEquals("Stream(1, 2, ?)", l.toString)
+  }
+
+  @Test
+  def testStreamToStringWhedHeadIsNotEvaluatedAndTailHeadIsEvaluated = {
+    val l = Stream(1, 2, 3, 4, 5)
+    l.tail.head
+    assertEquals("Stream(1, 2, ?)", l.toString)
+  }
+
+  @Test
+  def testStreamToStringWhenStreamIsForcedToList: Unit = {
+    val l = 1 #:: 2 #:: 3 #:: 4 #:: Stream.empty
+    l.toList
+    assertEquals("Stream(1, 2, 3, 4)", l.toString)
+  }
 }

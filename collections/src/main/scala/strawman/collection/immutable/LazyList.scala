@@ -226,8 +226,6 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
     else tail.foldLeft(op(z, head))(op)
   }
 
-  protected def memberEvaluationState: Option[(Boolean, Boolean)]
-
   override def toString: String = {
     @tailrec
     def _toString(ll: LazyList[A], acc: List[String]): List[String] = ll.memberEvaluationState match {
@@ -240,10 +238,10 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
 
     s"$className${_toString(this, List()).reverse.mkString("(", ", ", ")")}"
   }
+
 }
 
 sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with LazyListOps[X, CC, CC[X]], +C <: CC[A]] extends LinearSeqOps[A, CC, C] {
-
   def iterableFactory: LazyListFactory[CC]
 
   def tail: C
@@ -252,6 +250,8 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
 
   /** Force the evaluation of both the head and the tail of this `LazyList` */
   def force: Option[(A, CC[A])]
+
+  protected def memberEvaluationState: Option[(Boolean, Boolean)]
 
   override def nonEmpty: Boolean = !isEmpty
 
@@ -592,6 +592,20 @@ sealed abstract class Stream[+A] extends LinearSeq[A] with LazyListOps[A, Stream
     if (this.isEmpty) z
     else tail.foldLeft(op(z, head))(op)
   }
+
+  override def toString: String = {
+    @tailrec
+    def _toString(ll: Stream[A], acc: List[String]): List[String] = ll.memberEvaluationState match {
+      case None                 => acc
+      case Some((true, false))  => "?" :: s"${ll.head}" :: acc
+      case Some((true, true))   => _toString(ll.tail, s"${ll.head}" :: acc)
+      case Some((false, false)) => "?" :: acc
+      case Some((false, true))  => _toString(ll.tail, "?" :: acc)
+    }
+
+    s"$className${_toString(this, List()).reverse.mkString("(", ", ", ")")}"
+  }
+
 }
 
 @deprecated("Use LazyList (which has a lazy head and tail) instead of Stream (which has a lazy tail only)", "2.13.0")
@@ -606,6 +620,7 @@ object Stream extends LazyListFactory[Stream] {
     override def head: Nothing = throw new NoSuchElementException("head of empty lazy list")
     override def tail: Stream[Nothing] = throw new UnsupportedOperationException("tail of empty lazy list")
     def force: Evaluated[Nothing] = None
+    protected def memberEvaluationState: Option[(Boolean, Boolean)] = None
   }
 
   final class Cons[A](override val head: A, tl: => Stream[A]) extends Stream[A] {
@@ -616,6 +631,7 @@ object Stream extends LazyListFactory[Stream] {
       tl
     }
     def force: Evaluated[A] = Some((head, tail))
+    protected def memberEvaluationState: Option[(Boolean, Boolean)] = Some(true, tlEvaluated )
   }
 
   /** An alternative way of building and matching Streams using Stream.cons(hd, tl).
