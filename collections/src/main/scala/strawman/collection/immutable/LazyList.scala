@@ -240,6 +240,8 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
 
   override def nonEmpty: Boolean = !isEmpty
 
+  private[immutable] def evaluatedElementsInString: List[String]
+
   /** The stream resulting from the concatenation of this stream with the argument stream.
     *
     * @param suffix The collection that gets appended to this lazy list
@@ -359,8 +361,11 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
     if (this.isEmpty || that.isEmpty) iterableFactory.empty
     else cons[(A, B)]((this.head, that.head), this.tail.zip(that.tail))
 
+
   override final def zipWithIndex: CC[(A, Int)] = this.zip(LazyList.from(0))
 
+  override def toString: String =
+    s"$className${evaluatedElementsInString.flatMap(List(_)).mkString("(", ", ", ")")}"
 }
 
 sealed private[immutable] trait LazyListFactory[+CC[+X] <: LinearSeq[X] with LazyListOps[X, CC, CC[X]]] extends SeqFactory[CC] {
@@ -461,6 +466,7 @@ object LazyList extends LazyListFactory[LazyList] {
     override def tail: LazyList[Nothing] = throw new UnsupportedOperationException("tail of empty lazy list")
     def force: Evaluated[Nothing] = None
     override def toString: String = "Empty"
+    def evaluatedElementsInString: List[String] = List.empty[String]
   }
 
   final class Cons[A](hd: => A, tl: => LazyList[A]) extends LazyList[A] {
@@ -476,9 +482,13 @@ object LazyList extends LazyListFactory[LazyList] {
       tl
     }
     def force: Evaluated[A] = Some((head, tail))
-    override def toString: String =
-      if (hdEvaluated) s"$head #:: ${if (tlEvaluated) tail.toString else "?"}"
-      else "LazyList(?)"
+
+    def evaluatedElementsInString: List[String] = (hdEvaluated, tlEvaluated) match {
+      case (true, false) => List(s"$head", "?")
+      case (true, true) => List(s"$head") ::: tail.evaluatedElementsInString
+      case (false, false) => List("?")
+      case (false, true) => List("?") ::: tail.evaluatedElementsInString
+    }
   }
 
   /** An alternative way of building and matching Streams using LazyList.cons(hd, tl).
@@ -535,6 +545,9 @@ object LazyList extends LazyListFactory[LazyList] {
 
 @deprecated("Use LazyList (which has a lazy head and tail) instead of Stream (which has a lazy tail only)", "2.13.0")
 sealed abstract class Stream[+A] extends LinearSeq[A] with LazyListOps[A, Stream, Stream[A]] {
+
+  override def className: String = "Stream"
+
   def iterableFactory: LazyListFactory[Stream] = Stream
 
   protected[this] def fromSpecificIterable(coll: collection.Iterable[A]): Stream[A] = fromIterable(coll)
@@ -590,7 +603,7 @@ object Stream extends LazyListFactory[Stream] {
     override def head: Nothing = throw new NoSuchElementException("head of empty lazy list")
     override def tail: Stream[Nothing] = throw new UnsupportedOperationException("tail of empty lazy list")
     def force: Evaluated[Nothing] = None
-    override def toString: String = "Empty"
+    private[immutable] def evaluatedElementsInString() = List.empty[String]
   }
 
   final class Cons[A](override val head: A, tl: => Stream[A]) extends Stream[A] {
@@ -601,8 +614,10 @@ object Stream extends LazyListFactory[Stream] {
       tl
     }
     def force: Evaluated[A] = Some((head, tail))
-    override def toString: String =
-      s"$head #:: ${if (tlEvaluated) tail.toString else "?"}"
+    private[immutable] def evaluatedElementsInString(): List[String] = {
+      if (tlEvaluated) return List(s"$head") ::: tail.evaluatedElementsInString
+      else return List(s"$head")
+    }
   }
 
   /** An alternative way of building and matching Streams using Stream.cons(hd, tl).
