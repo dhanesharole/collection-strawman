@@ -242,6 +242,7 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
 }
 
 sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with LazyListOps[X, CC, CC[X]], +C <: CC[A]] extends LinearSeqOps[A, CC, C] {
+  
   def iterableFactory: LazyListFactory[CC]
 
   def tail: C
@@ -373,7 +374,6 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
   override final def zip[B](that: collection.Iterable[B]): CC[(A, B)] =
     if (this.isEmpty || that.isEmpty) iterableFactory.empty
     else cons[(A, B)]((this.head, that.head), this.tail.zip(that.tail))
-
 
   override final def zipWithIndex: CC[(A, Int)] = this.zip(LazyList.from(0))
 }
