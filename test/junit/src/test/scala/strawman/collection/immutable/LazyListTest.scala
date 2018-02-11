@@ -135,14 +135,14 @@ class LazyListTest {
   @Test
   def testLazyListToStringWhenHeadAndTailBothAreNotEvaluated = {
     val l = LazyList(1, 2, 3, 4, 5)
-    assertEquals("LazyList(?)", l.toString())
+    assertEquals("LazyList(?)", l.toString)
   }
 
   @Test
   def testLazyListToStringWhenOnlyHeadIsEvaluated = {
     val l = LazyList(1, 2, 3, 4, 5)
     l.head
-    assertEquals("LazyList(1, ?)", l.toString())
+    assertEquals("LazyList(1, ?)", l.toString)
   }
 
   @Test
@@ -150,7 +150,7 @@ class LazyListTest {
     val l = LazyList(1, 2, 3, 4, 5)
     l.head
     l.tail
-    assertEquals("LazyList(1, ?)", l.toString())
+    assertEquals("LazyList(1, ?)", l.toString)
   }
 
   @Test
@@ -158,28 +158,28 @@ class LazyListTest {
     val l = LazyList(1, 2, 3, 4, 5)
     l.head
     l.tail.head
-    assertEquals("LazyList(1, 2, ?)", l.toString())
+    assertEquals("LazyList(1, 2, ?)", l.toString)
   }
 
   @Test
   def testLazyListToStringWhenHeadIsNotEvaluatedAndOnlyTailIsEvaluated = {
     val l = LazyList(1, 2, 3, 4, 5)
     l.tail
-    assertEquals("LazyList(?, ?)", l.toString())
+    assertEquals("LazyList(?, ?)", l.toString)
   }
 
   @Test
   def testLazyListToStringWhedHeadIsNotEvaluatedAndTailHeadIsEvaluated = {
     val l = LazyList(1, 2, 3, 4, 5)
     l.tail.head
-    assertEquals("LazyList(?, 2, ?)", l.toString())
+    assertEquals("LazyList(?, 2, ?)", l.toString)
   }
 
   @Test
   def testLazyListToStringWhenLazyListIsForcedToList: Unit = {
     val l = 1 #:: 2 #:: 3 #:: 4 #:: LazyList.Empty
     l.toList
-    assertEquals("LazyList(1, 2, 3, 4)", l.toString())
+    assertEquals("LazyList(1, 2, 3, 4)", l.toString)
   }
 
   def hasCorrectDrop(): Unit = {
