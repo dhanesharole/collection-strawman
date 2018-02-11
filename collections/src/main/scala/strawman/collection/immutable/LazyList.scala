@@ -240,7 +240,7 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
 
   override def nonEmpty: Boolean = !isEmpty
 
-  private[immutable] def evaluatedElementsInString: List[String]
+  private[immutable] def evaluatedElementsRepr: List[String]
 
   /** The stream resulting from the concatenation of this stream with the argument stream.
     *
@@ -365,7 +365,7 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
   override final def zipWithIndex: CC[(A, Int)] = this.zip(LazyList.from(0))
 
   override def toString: String =
-    s"$className${evaluatedElementsInString.flatMap(List(_)).mkString("(", ", ", ")")}"
+    s"$className${evaluatedElementsRepr.flatMap(List(_)).mkString("(", ", ", ")")}"
 }
 
 sealed private[immutable] trait LazyListFactory[+CC[+X] <: LinearSeq[X] with LazyListOps[X, CC, CC[X]]] extends SeqFactory[CC] {
@@ -466,7 +466,7 @@ object LazyList extends LazyListFactory[LazyList] {
     override def tail: LazyList[Nothing] = throw new UnsupportedOperationException("tail of empty lazy list")
     def force: Evaluated[Nothing] = None
     override def toString: String = "Empty"
-    def evaluatedElementsInString: List[String] = List.empty[String]
+    def evaluatedElementsRepr: List[String] = List.empty[String]
   }
 
   final class Cons[A](hd: => A, tl: => LazyList[A]) extends LazyList[A] {
@@ -483,11 +483,11 @@ object LazyList extends LazyListFactory[LazyList] {
     }
     def force: Evaluated[A] = Some((head, tail))
 
-    def evaluatedElementsInString: List[String] = (hdEvaluated, tlEvaluated) match {
+    def evaluatedElementsRepr: List[String] = (hdEvaluated, tlEvaluated) match {
       case (true, false) => List(s"$head", "?")
-      case (true, true) => List(s"$head") ::: tail.evaluatedElementsInString
+      case (true, true) => List(s"$head") ::: tail.evaluatedElementsRepr
       case (false, false) => List("?")
-      case (false, true) => List("?") ::: tail.evaluatedElementsInString
+      case (false, true) => List("?") ::: tail.evaluatedElementsRepr
     }
   }
 
@@ -603,7 +603,7 @@ object Stream extends LazyListFactory[Stream] {
     override def head: Nothing = throw new NoSuchElementException("head of empty lazy list")
     override def tail: Stream[Nothing] = throw new UnsupportedOperationException("tail of empty lazy list")
     def force: Evaluated[Nothing] = None
-    private[immutable] def evaluatedElementsInString = List.empty[String]
+    private[immutable] def evaluatedElementsRepr = List.empty[String]
   }
 
   final class Cons[A](override val head: A, tl: => Stream[A]) extends Stream[A] {
@@ -614,8 +614,8 @@ object Stream extends LazyListFactory[Stream] {
       tl
     }
     def force: Evaluated[A] = Some((head, tail))
-    private[immutable] def evaluatedElementsInString: List[String] = {
-      if (tlEvaluated) List(s"$head") ::: tail.evaluatedElementsInString
+    private[immutable] def evaluatedElementsRepr: List[String] = {
+      if (tlEvaluated) List(s"$head") ::: tail.evaluatedElementsRepr
       else List(s"$head", "?")
     }
   }
