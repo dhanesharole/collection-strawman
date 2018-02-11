@@ -603,7 +603,7 @@ object Stream extends LazyListFactory[Stream] {
     override def head: Nothing = throw new NoSuchElementException("head of empty lazy list")
     override def tail: Stream[Nothing] = throw new UnsupportedOperationException("tail of empty lazy list")
     def force: Evaluated[Nothing] = None
-    private[immutable] def evaluatedElementsInString() = List.empty[String]
+    private[immutable] def evaluatedElementsInString = List.empty[String]
   }
 
   final class Cons[A](override val head: A, tl: => Stream[A]) extends Stream[A] {
@@ -614,7 +614,7 @@ object Stream extends LazyListFactory[Stream] {
       tl
     }
     def force: Evaluated[A] = Some((head, tail))
-    private[immutable] def evaluatedElementsInString(): List[String] = {
+    private[immutable] def evaluatedElementsInString: List[String] = {
       if (tlEvaluated) List(s"$head") ::: tail.evaluatedElementsInString
       else List(s"$head", "?")
     }
