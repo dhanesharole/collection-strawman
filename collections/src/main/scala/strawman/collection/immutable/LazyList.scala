@@ -615,8 +615,8 @@ object Stream extends LazyListFactory[Stream] {
     }
     def force: Evaluated[A] = Some((head, tail))
     private[immutable] def evaluatedElementsInString(): List[String] = {
-      if (tlEvaluated) return List(s"$head") ::: tail.evaluatedElementsInString
-      else return List(s"$head")
+      if (tlEvaluated) List(s"$head") ::: tail.evaluatedElementsInString
+      else List(s"$head", "?")
     }
   }
 
