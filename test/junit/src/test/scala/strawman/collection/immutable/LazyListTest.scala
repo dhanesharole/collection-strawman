@@ -182,6 +182,12 @@ class LazyListTest {
     assertEquals("LazyList(1, 2, 3, 4)", l.toString)
   }
 
+  @Test
+  def testLazyListToStringWhenStreamIsEmpty: Unit = {
+    val l = LazyList.empty
+    assertEquals("LazyList()", l.toString)
+  }
+
   def hasCorrectDrop(): Unit = {
     assertEquals(LazyList(), LazyList().drop(2))
     assertEquals(LazyList(), LazyList(1).drop(2))

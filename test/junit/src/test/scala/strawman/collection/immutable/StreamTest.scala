@@ -181,4 +181,10 @@ class StreamTest {
     l.toList
     assertEquals("Stream(1, 2, 3, 4)", l.toString)
   }
+
+  @Test
+  def testStreamToStringWhenStreamIsEmpty: Unit = {
+    val l = Stream.empty
+    assertEquals("Stream()", l.toString)
+  }
 }
