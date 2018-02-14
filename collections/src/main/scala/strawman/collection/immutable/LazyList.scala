@@ -4,7 +4,7 @@ package immutable
 
 import strawman.collection.mutable.{ArrayBuffer, Builder}
 
-import scala.{Any, AnyRef, Boolean, Int, None, NoSuchElementException, noinline, Nothing, Option, PartialFunction, Some, StringContext, Unit, UnsupportedOperationException, deprecated}
+import scala.{Any, AnyRef, Boolean, Int, None, NoSuchElementException, noinline, Nothing, Option, PartialFunction, Some, StringContext, Unit, UnsupportedOperationException, deprecated, StringBuilder}
 import scala.Predef.String
 import scala.annotation.tailrec
 import scala.annotation.unchecked.uncheckedVariance
@@ -228,15 +228,14 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
 
   override def toString: String = {
     @tailrec
-    def _toString(ll: LazyList[A], acc: List[String]): List[String] = ll.memberEvaluationState match {
-      case None                 => acc
-      case Some((true, false))  => "?" :: s"${ll.head}" :: acc
-      case Some((true, true))   => _toString(ll.tail, s"${ll.head}" :: acc)
-      case Some((false, false)) => "?" :: acc
-      case Some((false, true))  => _toString(ll.tail, "?" :: acc)
+    def _toStringBuilder(ll: LazyList[A], sb: StringBuilder): StringBuilder = ll.memberEvaluationState match {
+      case None                 => sb
+      case Some((true, false))  => sb.append(s"${ll.head}").append("?")
+      case Some((true, true))   => _toStringBuilder(ll.tail, sb.append(s"${ll.head}"))
+      case Some((false, false)) => sb.append("?")
+      case Some((false, true))  => _toStringBuilder(ll.tail, sb.append("?"))
     }
-
-    s"$className${_toString(this, List()).reverse.mkString("(", ", ", ")")}"
+    s"$className${_toStringBuilder(this, new StringBuilder).mkString("(", ", ", ")")}"
   }
 
 }
@@ -595,15 +594,14 @@ sealed abstract class Stream[+A] extends LinearSeq[A] with LazyListOps[A, Stream
 
   override def toString: String = {
     @tailrec
-    def _toString(ll: Stream[A], acc: List[String]): List[String] = ll.memberEvaluationState match {
-      case None                 => acc
-      case Some((true, false))  => "?" :: s"${ll.head}" :: acc
-      case Some((true, true))   => _toString(ll.tail, s"${ll.head}" :: acc)
-      case Some((false, false)) => "?" :: acc
-      case Some((false, true))  => _toString(ll.tail, "?" :: acc)
+    def _toStringBuilder(ll: Stream[A], sb: StringBuilder): StringBuilder = ll.memberEvaluationState match {
+      case None                 => sb
+      case Some((true, false))  => sb.append(s"${ll.head}").append("?")
+      case Some((true, true))   => _toStringBuilder(ll.tail, sb.append(s"${ll.head}"))
+      case Some((false, false)) => sb.append("?")
+      case Some((false, true))  => _toStringBuilder(ll.tail, sb.append("?"))
     }
-
-    s"$className${_toString(this, List()).reverse.mkString("(", ", ", ")")}"
+    s"$className${_toStringBuilder(this, new StringBuilder).mkString("(", ", ", ")")}"
   }
 
 }
