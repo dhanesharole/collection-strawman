@@ -188,6 +188,17 @@ class LazyListTest {
     assertEquals("LazyList()", l.toString)
   }
 
+  @Test
+  def testLaztListToStringWhenLazyListHasCyclicReference: Unit = {
+    lazy val cyc: LazyList[Int] = 1 #:: 2 #:: 3 #:: 4 #:: cyc
+    cyc.head
+    cyc.tail.head
+    cyc.tail.tail.head
+    cyc.tail.tail.tail.head
+    cyc.tail.tail.tail.tail.head
+    assertEquals("LazyList(1, 2, 3, 4, -)", cyc.toString)
+  }
+
   def hasCorrectDrop(): Unit = {
     assertEquals(LazyList(), LazyList().drop(2))
     assertEquals(LazyList(), LazyList(1).drop(2))

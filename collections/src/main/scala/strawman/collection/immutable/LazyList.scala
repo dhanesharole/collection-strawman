@@ -4,10 +4,11 @@ package immutable
 
 import strawman.collection.mutable.{ArrayBuffer, Builder}
 
-import scala.{Any, AnyRef, Boolean, Int, None, NoSuchElementException, noinline, Nothing, Option, PartialFunction, Some, StringContext, Unit, UnsupportedOperationException, deprecated, StringBuilder}
+import scala.{Any, AnyRef, Boolean, Int, NoSuchElementException, None, Nothing, Option, PartialFunction, Some, StringBuilder, StringContext, Unit, UnsupportedOperationException, deprecated, noinline}
 import scala.Predef.String
 import scala.annotation.tailrec
 import scala.annotation.unchecked.uncheckedVariance
+import scala.collection.mutable.StringBuilder
 
 /**  The class `LazyList` implements lazy lists where elements
   *  are only evaluated when they are needed. Here is an example:
@@ -183,7 +184,7 @@ import scala.annotation.unchecked.uncheckedVariance
   *  @define orderDependent
   *  @define orderDependentFold
   */
-sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, LazyList, LazyList[A]] {
+sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, LazyList, LazyList[A]]{
   def iterableFactory: LazyListFactory[LazyList] = LazyList
 
   protected[this] def fromSpecificIterable(coll: collection.Iterable[A]): LazyList[A] = fromIterable(coll)
@@ -226,22 +227,112 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
     else tail.foldLeft(op(z, head))(op)
   }
 
-  override def toString: String = {
-    @tailrec
-    def _toStringBuilder(ll: LazyList[A], sb: StringBuilder): StringBuilder = ll.memberEvaluationState match {
-      case None                 => sb
-      case Some((true, false))  => sb.append(s"${ll.head}").append("?")
-      case Some((true, true))   => _toStringBuilder(ll.tail, sb.append(s"${ll.head}"))
-      case Some((false, false)) => sb.append("?")
-      case Some((false, true))  => _toStringBuilder(ll.tail, sb.append("?"))
+  /** Write all defined elements of this iterable into given string builder.
+    *  The written text begins with the string `start` and is finished by the string
+    *  `end`. Inside, the string representations of defined elements (w.r.t.
+    *  the method `toString()`) are separated by the string `sep`. The method will
+    *  not force evaluation of undefined elements. A tail of such elements will be
+    * represented by a `"?"` instead.  A cyclic stream is represented by a `"-"`
+    * at the point where the cycle repeats.
+    *
+    * @param b The [[collection.mutable.StringBuilder]] factory to which we need
+    * to add the string elements.
+    * @param start The prefix of the resulting string (e.g. "LazyList(")
+    * @param sep The separator between elements of the resulting string (e.g. ",")
+    * @param end The end of the resulting string (e.g. ")")
+    * @return The original [[collection.mutable.StringBuilder]] containing the
+    * resulting string.
+    */
+  def toStringBuilder(b: StringBuilder): StringBuilder = {
+    if (!isEmpty) {
+      if (headDefined && !tailDefined) b append head // For LazyList, head is also Lazy. Hence adds `?` if it not defined yet
+      if (!headDefined && tailDefined) b append "?" // For LazyList, head is also Lazy. Hence adds `?` if it not defined yet
+      if (headDefined && tailDefined) b append head
+      var cursor = this
+      var n = 1
+      if (cursor.tailDefined) {  // If tailDefined, also !isEmpty
+        var scout = tail
+        if (scout.isEmpty) {
+          // Single element.  Bail out early.
+          return b
+        }
+        if (cursor ne scout) {
+          cursor = scout
+          if (scout.tailDefined) {
+            scout = scout.tail
+            // Use 2x 1x iterator trick for cycle detection; slow iterator can add strings
+            while ((cursor ne scout) && scout.tailDefined) {
+              if (cursor.headDefined) b append cursor.head
+              n += 1
+              cursor = cursor.tail
+              scout = scout.tail
+              if (scout.tailDefined) scout = scout.tail
+            }
+          }
+        }
+        if (!scout.tailDefined) {  // Not a cycle, scout hit an end
+          while (cursor ne scout) {
+            if (cursor.headDefined) b append cursor.head
+            n += 1
+            cursor = cursor.tail
+          }
+          if (cursor.nonEmpty) {
+            if (cursor.headDefined) b append cursor.head
+          }
+        }
+        else {
+          // Cycle.
+          // If we have a prefix of length P followed by a cycle of length C,
+          // the scout will be at position (P%C) in the cycle when the cursor
+          // enters it at P.  They'll then collide when the scout advances another
+          // C - (P%C) ahead of the cursor.
+          // If we run the scout P farther, then it will be at the start of
+          // the cycle: (C - (P%C) + (P%C)) == C == 0.  So if another runner
+          // starts at the beginning of the prefix, they'll collide exactly at
+          // the start of the loop.
+          var runner = this
+          var k = 0
+          while (runner ne scout) {
+            runner = runner.tail
+            scout = scout.tail
+            k += 1
+          }
+          // Now runner and scout are at the beginning of the cycle.  Advance
+          // cursor, adding to string, until it hits; then we'll have covered
+          // everything once.  If cursor is already at beginning, we'd better
+          // advance one first unless runner didn't go anywhere (in which case
+          // we've already looped once).
+          if ((cursor eq scout) && (k > 0)) {
+            if (cursor.headDefined) b append cursor.head
+            n += 1
+            cursor = cursor.tail
+          }
+          while (cursor ne scout) {
+            if (cursor.headDefined) b append cursor.head
+            n += 1
+            cursor = cursor.tail
+          }
+          // Subtract prefix length from total length for cycle reporting.
+          // (Not currently used, but probably a good idea for the future.)
+          n -= k
+        }
+      }
+      if (!cursor.isEmpty) {
+        // Either undefined or cyclic; we can check with tailDefined
+        if (!cursor.tailDefined) b append "?"
+        else b append "-"
+        // Originally, it would used to print `"..."` from the point at which cycle starts.
+        // But here we are using mkString to create final result. Using `"..."` turns each `"."` into separate character.
+        // Hence using `"-"` this symbol.
+      }
     }
-    s"$className${_toStringBuilder(this, new StringBuilder).mkString("(", ", ", ")")}"
+    b
   }
 
 }
 
 sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with LazyListOps[X, CC, CC[X]], +C <: CC[A]] extends LinearSeqOps[A, CC, C] {
-  
+
   def iterableFactory: LazyListFactory[CC]
 
   def tail: C
@@ -251,7 +342,9 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
   /** Force the evaluation of both the head and the tail of this `LazyList` */
   def force: Option[(A, CC[A])]
 
-  protected def memberEvaluationState: Option[(Boolean, Boolean)]
+  protected def tailDefined: Boolean
+
+  protected def headDefined: Boolean
 
   override def nonEmpty: Boolean = !isEmpty
 
@@ -375,6 +468,12 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
     else cons[(A, B)]((this.head, that.head), this.tail.zip(that.tail))
 
   override final def zipWithIndex: CC[(A, Int)] = this.zip(LazyList.from(0))
+
+  def toStringBuilder(b: StringBuilder): StringBuilder
+
+  override def toString: String = {
+    s"$className${toStringBuilder(new StringBuilder).mkString("(", ", ", ")")}"
+  }
 }
 
 sealed private[immutable] trait LazyListFactory[+CC[+X] <: LinearSeq[X] with LazyListOps[X, CC, CC[X]]] extends SeqFactory[CC] {
@@ -474,7 +573,8 @@ object LazyList extends LazyListFactory[LazyList] {
     override def head: Nothing = throw new NoSuchElementException("head of empty lazy list")
     override def tail: LazyList[Nothing] = throw new UnsupportedOperationException("tail of empty lazy list")
     def force: Evaluated[Nothing] = None
-    protected def memberEvaluationState: Option[(Boolean, Boolean)] = None
+    protected def tailDefined: Boolean = false
+    protected def headDefined: Boolean = false
   }
 
   final class Cons[A](hd: => A, tl: => LazyList[A]) extends LazyList[A] {
@@ -490,7 +590,8 @@ object LazyList extends LazyListFactory[LazyList] {
       tl
     }
     def force: Evaluated[A] = Some((head, tail))
-    protected def memberEvaluationState: Option[(Boolean, Boolean)] = Some(hdEvaluated, tlEvaluated)
+    protected def tailDefined: Boolean = tlEvaluated
+    protected def headDefined: Boolean = hdEvaluated
   }
 
   /** An alternative way of building and matching Streams using LazyList.cons(hd, tl).
@@ -592,16 +693,104 @@ sealed abstract class Stream[+A] extends LinearSeq[A] with LazyListOps[A, Stream
     else tail.foldLeft(op(z, head))(op)
   }
 
-  override def toString: String = {
-    @tailrec
-    def _toStringBuilder(ll: Stream[A], sb: StringBuilder): StringBuilder = ll.memberEvaluationState match {
-      case None                 => sb
-      case Some((true, false))  => sb.append(s"${ll.head}").append("?")
-      case Some((true, true))   => _toStringBuilder(ll.tail, sb.append(s"${ll.head}"))
-      case Some((false, false)) => sb.append("?")
-      case Some((false, true))  => _toStringBuilder(ll.tail, sb.append("?"))
+  /** Write all defined elements of this iterable into given string builder.
+    *  The written text begins with the string `start` and is finished by the string
+    *  `end`. Inside, the string representations of defined elements (w.r.t.
+    *  the method `toString()`) are separated by the string `sep`. The method will
+    *  not force evaluation of undefined elements. A tail of such elements will be
+    * represented by a `"?"` instead.  A cyclic stream is represented by a `"-"`
+    * at the point where the cycle repeats.
+    *
+    * @param b The [[collection.mutable.StringBuilder]] factory to which we need
+    * to add the string elements.
+    * @param start The prefix of the resulting string (e.g. "Stream(")
+    * @param sep The separator between elements of the resulting string (e.g. ",")
+    * @param end The end of the resulting string (e.g. ")")
+    * @return The original [[collection.mutable.StringBuilder]] containing the
+    * resulting string.
+    */
+  def toStringBuilder(b: StringBuilder): StringBuilder = {
+    if (!isEmpty) {
+      b append head
+      var cursor = this
+      var n = 1
+      if (cursor.tailDefined) {  // If tailDefined, also !isEmpty
+        var scout = tail
+        if (scout.isEmpty) {
+          // Single element.  Bail out early.
+          return b
+        }
+        if (cursor ne scout) {
+          cursor = scout
+          if (scout.tailDefined) {
+            scout = scout.tail
+            // Use 2x 1x iterator trick for cycle detection; slow iterator can add strings
+            while ((cursor ne scout) && scout.tailDefined) {
+              b append cursor.head
+              n += 1
+              cursor = cursor.tail
+              scout = scout.tail
+              if (scout.tailDefined) scout = scout.tail
+            }
+          }
+        }
+        if (!scout.tailDefined) {  // Not a cycle, scout hit an end
+          while (cursor ne scout) {
+            b append cursor.head
+            n += 1
+            cursor = cursor.tail
+          }
+          if (cursor.nonEmpty) {
+            b append cursor.head
+          }
+        }
+        else {
+          // Cycle.
+          // If we have a prefix of length P followed by a cycle of length C,
+          // the scout will be at position (P%C) in the cycle when the cursor
+          // enters it at P.  They'll then collide when the scout advances another
+          // C - (P%C) ahead of the cursor.
+          // If we run the scout P farther, then it will be at the start of
+          // the cycle: (C - (P%C) + (P%C)) == C == 0.  So if another runner
+          // starts at the beginning of the prefix, they'll collide exactly at
+          // the start of the loop.
+          var runner = this
+          var k = 0
+          while (runner ne scout) {
+            runner = runner.tail
+            scout = scout.tail
+            k += 1
+          }
+          // Now runner and scout are at the beginning of the cycle.  Advance
+          // cursor, adding to string, until it hits; then we'll have covered
+          // everything once.  If cursor is already at beginning, we'd better
+          // advance one first unless runner didn't go anywhere (in which case
+          // we've already looped once).
+          if ((cursor eq scout) && (k > 0)) {
+            b append cursor.head
+            n += 1
+            cursor = cursor.tail
+          }
+          while (cursor ne scout) {
+            b append cursor.head
+            n += 1
+            cursor = cursor.tail
+          }
+          // Subtract prefix length from total length for cycle reporting.
+          // (Not currently used, but probably a good idea for the future.)
+          n -= k
+        }
+      }
+      if (!cursor.isEmpty) {
+        // Either undefined or cyclic; we can check with tailDefined
+        if (!cursor.tailDefined) b append "?"
+        else b append "-"
+        // Originally, it would used to print `"..."` from the point at which cycle starts.
+        // But here we are using mkString to create final result. Using `"..."` turns each `"."` into separate character.
+        // Hence using `"-"` this symbol.
+      }
     }
-    s"$className${_toStringBuilder(this, new StringBuilder).mkString("(", ", ", ")")}"
+    b
   }
 
 }
@@ -618,7 +807,8 @@ object Stream extends LazyListFactory[Stream] {
     override def head: Nothing = throw new NoSuchElementException("head of empty lazy list")
     override def tail: Stream[Nothing] = throw new UnsupportedOperationException("tail of empty lazy list")
     def force: Evaluated[Nothing] = None
-    protected def memberEvaluationState: Option[(Boolean, Boolean)] = None
+    protected def tailDefined: Boolean = false
+    protected def headDefined: Boolean = false
   }
 
   final class Cons[A](override val head: A, tl: => Stream[A]) extends Stream[A] {
@@ -629,7 +819,8 @@ object Stream extends LazyListFactory[Stream] {
       tl
     }
     def force: Evaluated[A] = Some((head, tail))
-    protected def memberEvaluationState: Option[(Boolean, Boolean)] = Some(true, tlEvaluated )
+    protected def tailDefined: Boolean = tlEvaluated
+    protected def headDefined: Boolean = true
   }
 
   /** An alternative way of building and matching Streams using Stream.cons(hd, tl).
