@@ -9,7 +9,7 @@
 package strawman.collection
 package mutable
 
-import scala.{Unit, Int, Serializable, Option, NoSuchElementException, Boolean, IndexOutOfBoundsException}
+import scala.{Unit, Int, Serializable, SerialVersionUID, Option, NoSuchElementException, Boolean, IndexOutOfBoundsException}
 import scala.Predef.require
 import immutable.List
 
@@ -26,6 +26,7 @@ import immutable.List
   *  @see [[http://docs.scala-lang.org/overviews/collections/concrete-mutable-collection-classes.html#mutable_lists "Scala's Collection Library overview"]]
   *  section on `Mutable Lists` for more information.
   */
+@SerialVersionUID(3L)
 private[mutable] class MutableList[A]
   extends AbstractSeq[A]
     with strawman.collection.LinearSeq[A]
@@ -110,7 +111,7 @@ private[mutable] class MutableList[A]
     e
   }
 
-  def subtract(elem: A): this.type = {
+  def subtractOne(elem: A): this.type = {
     var these = first0
     while (these.nonEmpty) {
       if(these.elem == elem) {
@@ -159,7 +160,7 @@ private[mutable] class MutableList[A]
 
   /** Returns the length of this list.
     */
-  override def size: Int = len
+  override def length: Int = len
 
   /** Returns the `n`-th element of this list.
     *  @throws IndexOutOfBoundsException if index does not exist.

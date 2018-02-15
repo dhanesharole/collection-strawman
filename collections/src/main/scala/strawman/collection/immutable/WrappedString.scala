@@ -19,13 +19,14 @@ import mutable.{Builder, StringBuilder}
   *  @define Coll `WrappedString`
   *  @define coll wrapped string
   */
-final class WrappedString(val self: String) extends AbstractSeq[Char] with IndexedSeq[Char] {
+final class WrappedString(val self: String) extends AbstractSeq[Char] with IndexedSeq[Char]
+  with IndexedSeqOps[Char, IndexedSeq, WrappedString] {
 
   def apply(i: Int): Char = self.charAt(i)
 
-  protected[this] def fromSpecificIterable(coll: strawman.collection.Iterable[Char]): IndexedSeq[Char] =
+  protected[this] def fromSpecificIterable(coll: strawman.collection.Iterable[Char]): WrappedString =
     WrappedString.fromSpecific(coll)
-  protected[this] def newSpecificBuilder(): Builder[Char, IndexedSeq[Char]] = WrappedString.newBuilder()
+  protected[this] def newSpecificBuilder(): Builder[Char, WrappedString] = WrappedString.newBuilder()
   def iterableFactory: SeqFactory[IndexedSeq] = IndexedSeq
 
   override def slice(from: Int, until: Int): WrappedString = {
@@ -36,7 +37,7 @@ final class WrappedString(val self: String) extends AbstractSeq[Char] with Index
     val end = if (until > length) length else until
     new WrappedString(self.substring(start, end))
   }
-  def finiteSize = self.length
+  override def length = self.length
   override def toString = self
   override def view: StringView = new StringView(self)
 }

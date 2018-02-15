@@ -1,7 +1,7 @@
 package strawman.collection
 package mutable
 
-import scala.{Array, Serializable, Byte, Short, Char, Int, Long, Float, Double, Boolean, Unit, AnyRef, Any}
+import scala.{Array, Serializable, SerialVersionUID, Byte, Short, Char, Int, Long, Float, Double, Boolean, Unit, AnyRef, Any}
 import scala.Predef.implicitly
 import scala.reflect.ClassTag
 import strawman.collection.immutable.ImmutableArray
@@ -12,7 +12,10 @@ import strawman.collection.immutable.ImmutableArray
  *
  *  @tparam T    the type of the elements for the builder.
  */
-sealed abstract class ArrayBuilder[T] extends ReusableBuilder[T, Array[T]] with Serializable {
+@SerialVersionUID(3L)
+sealed abstract class ArrayBuilder[T]
+  extends ReusableBuilder[T, Array[T]]
+    with Serializable {
   protected[this] var capacity: Int = 0
   protected var size: Int = 0
 
@@ -65,6 +68,7 @@ object ArrayBuilder {
    *
    *  @tparam T     type of elements for the array builder, subtype of `AnyRef` with a `ClassTag` context bound.
    */
+  @SerialVersionUID(3L)
   final class ofRef[T <: AnyRef : ClassTag] extends ArrayBuilder[T] {
 
     private var elems: Array[T] = _
@@ -89,9 +93,9 @@ object ArrayBuilder {
 
     override def addAll(xs: IterableOnce[T]): this.type = (xs.asInstanceOf[AnyRef]) match {
       case xs: ImmutableArray.ofRef[_] =>
-        ensureSize(this.size + xs.size)
-        Array.copy(xs.unsafeArray, 0, elems, this.size, xs.size)
-        size += xs.size
+        ensureSize(this.size + xs.length)
+        Array.copy(xs.unsafeArray, 0, elems, this.size, xs.length)
+        size += xs.length
         this
       case _ =>
         super.addAll(xs)
@@ -114,6 +118,7 @@ object ArrayBuilder {
   }
 
   /** A class for array builders for arrays of `byte`s. It can be reused. */
+  @SerialVersionUID(3L)
   final class ofByte extends ArrayBuilder[Byte] {
 
     private var elems: Array[Byte] = _
@@ -138,9 +143,9 @@ object ArrayBuilder {
 
     override def addAll(xs: IterableOnce[Byte]): this.type = xs match {
       case xs: ImmutableArray.ofByte =>
-        ensureSize(this.size + xs.size)
-        Array.copy(xs.unsafeArray, 0, elems, this.size, xs.size)
-        size += xs.size
+        ensureSize(this.size + xs.length)
+        Array.copy(xs.unsafeArray, 0, elems, this.size, xs.length)
+        size += xs.length
         this
       case _ =>
         super.addAll(xs)
@@ -163,6 +168,7 @@ object ArrayBuilder {
   }
 
   /** A class for array builders for arrays of `short`s. It can be reused. */
+  @SerialVersionUID(3L)
   final class ofShort extends ArrayBuilder[Short] {
 
     private var elems: Array[Short] = _
@@ -187,9 +193,9 @@ object ArrayBuilder {
 
     override def addAll(xs: IterableOnce[Short]): this.type = xs match {
       case xs: ImmutableArray.ofShort =>
-        ensureSize(this.size + xs.size)
-        Array.copy(xs.unsafeArray, 0, elems, this.size, xs.size)
-        size += xs.size
+        ensureSize(this.size + xs.length)
+        Array.copy(xs.unsafeArray, 0, elems, this.size, xs.length)
+        size += xs.length
         this
       case _ =>
         super.addAll(xs)
@@ -212,6 +218,7 @@ object ArrayBuilder {
   }
 
   /** A class for array builders for arrays of `char`s. It can be reused. */
+  @SerialVersionUID(3L)
   final class ofChar extends ArrayBuilder[Char] {
 
     private var elems: Array[Char] = _
@@ -236,9 +243,9 @@ object ArrayBuilder {
 
     override def addAll(xs: IterableOnce[Char]): this.type = xs match {
       case xs: ImmutableArray.ofChar =>
-        ensureSize(this.size + xs.size)
-        Array.copy(xs.unsafeArray, 0, elems, this.size, xs.size)
-        size += xs.size
+        ensureSize(this.size + xs.length)
+        Array.copy(xs.unsafeArray, 0, elems, this.size, xs.length)
+        size += xs.length
         this
       case _ =>
         super.addAll(xs)
@@ -261,6 +268,7 @@ object ArrayBuilder {
   }
 
   /** A class for array builders for arrays of `int`s. It can be reused. */
+  @SerialVersionUID(3L)
   final class ofInt extends ArrayBuilder[Int] {
 
     private var elems: Array[Int] = _
@@ -285,9 +293,9 @@ object ArrayBuilder {
 
     override def addAll(xs: IterableOnce[Int]): this.type = xs match {
       case xs: ImmutableArray.ofInt =>
-        ensureSize(this.size + xs.size)
-        Array.copy(xs.unsafeArray, 0, elems, this.size, xs.size)
-        size += xs.size
+        ensureSize(this.size + xs.length)
+        Array.copy(xs.unsafeArray, 0, elems, this.size, xs.length)
+        size += xs.length
         this
       case _ =>
         super.addAll(xs)
@@ -310,6 +318,7 @@ object ArrayBuilder {
   }
 
   /** A class for array builders for arrays of `long`s. It can be reused. */
+  @SerialVersionUID(3L)
   final class ofLong extends ArrayBuilder[Long] {
 
     private var elems: Array[Long] = _
@@ -334,9 +343,9 @@ object ArrayBuilder {
 
     override def addAll(xs: IterableOnce[Long]): this.type = xs match {
       case xs: ImmutableArray.ofLong =>
-        ensureSize(this.size + xs.size)
-        Array.copy(xs.unsafeArray, 0, elems, this.size, xs.size)
-        size += xs.size
+        ensureSize(this.size + xs.length)
+        Array.copy(xs.unsafeArray, 0, elems, this.size, xs.length)
+        size += xs.length
         this
       case _ =>
         super.addAll(xs)
@@ -359,6 +368,7 @@ object ArrayBuilder {
   }
 
   /** A class for array builders for arrays of `float`s. It can be reused. */
+  @SerialVersionUID(3L)
   final class ofFloat extends ArrayBuilder[Float] {
 
     private var elems: Array[Float] = _
@@ -383,9 +393,9 @@ object ArrayBuilder {
 
     override def addAll(xs: IterableOnce[Float]): this.type = xs match {
       case xs: ImmutableArray.ofFloat =>
-        ensureSize(this.size + xs.size)
-        Array.copy(xs.unsafeArray, 0, elems, this.size, xs.size)
-        size += xs.size
+        ensureSize(this.size + xs.length)
+        Array.copy(xs.unsafeArray, 0, elems, this.size, xs.length)
+        size += xs.length
         this
       case _ =>
         super.addAll(xs)
@@ -408,6 +418,7 @@ object ArrayBuilder {
   }
 
   /** A class for array builders for arrays of `double`s. It can be reused. */
+  @SerialVersionUID(3L)
   final class ofDouble extends ArrayBuilder[Double] {
 
     private var elems: Array[Double] = _
@@ -432,9 +443,9 @@ object ArrayBuilder {
 
     override def addAll(xs: IterableOnce[Double]): this.type = xs match {
       case xs: ImmutableArray.ofDouble =>
-        ensureSize(this.size + xs.size)
-        Array.copy(xs.unsafeArray, 0, elems, this.size, xs.size)
-        size += xs.size
+        ensureSize(this.size + xs.length)
+        Array.copy(xs.unsafeArray, 0, elems, this.size, xs.length)
+        size += xs.length
         this
       case _ =>
         super.addAll(xs)
@@ -457,6 +468,7 @@ object ArrayBuilder {
   }
 
   /** A class for array builders for arrays of `boolean`s. It can be reused. */
+  @SerialVersionUID(3L)
   class ofBoolean extends ArrayBuilder[Boolean] {
 
     private var elems: Array[Boolean] = _
@@ -481,9 +493,9 @@ object ArrayBuilder {
 
     override def addAll(xs: IterableOnce[Boolean]): this.type = xs match {
       case xs: ImmutableArray.ofBoolean =>
-        ensureSize(this.size + xs.size)
-        Array.copy(xs.unsafeArray, 0, elems, this.size, xs.size)
-        size += xs.size
+        ensureSize(this.size + xs.length)
+        Array.copy(xs.unsafeArray, 0, elems, this.size, xs.length)
+        size += xs.length
         this
       case _ =>
         super.addAll(xs)
@@ -506,6 +518,7 @@ object ArrayBuilder {
   }
 
   /** A class for array builders for arrays of `Unit` type. It can be reused. */
+  @SerialVersionUID(3L)
   final class ofUnit extends ArrayBuilder[Unit] {
 
     def addOne(elem: Unit): this.type = {

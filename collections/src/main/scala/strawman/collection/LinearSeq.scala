@@ -10,6 +10,8 @@ import scala.annotation.tailrec
   */
 trait LinearSeq[+A] extends Seq[A] with LinearSeqOps[A, LinearSeq, LinearSeq[A]]
 
+object LinearSeq extends SeqFactory.Delegate[LinearSeq](immutable.List)
+
 /** Base trait for linear Seq operations */
 trait LinearSeqOps[+A, +CC[X] <: LinearSeq[X], +C <: LinearSeq[A]] extends Any with SeqOps[A, CC, C] {
 
@@ -25,7 +27,7 @@ trait LinearSeqOps[+A, +CC[X] <: LinearSeq[X], +C <: LinearSeq[A]] extends Any w
     def next() = { val r = current.head; current = current.tail; r }
   }
 
-  override def size: Int = {
+  def length: Int = {
     var these = toIterable
     var len = 0
     while (!these.isEmpty) {

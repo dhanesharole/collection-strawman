@@ -9,12 +9,13 @@
 package strawman.collection
 package mutable
 
-import scala.{Int, Unit, Serializable, Option, NoSuchElementException, IndexOutOfBoundsException, Some, None, Boolean}
+import scala.{Int, Unit, Serializable, SerialVersionUID, Option, NoSuchElementException, IndexOutOfBoundsException, Some, None, Boolean}
 import scala.Predef.require
 import scala.annotation.tailrec
 
 /** A linked list implementation which is used internally in MutableList and Queue.
   */
+@SerialVersionUID(3L)
 private[mutable] final class LinkedList[A]() extends AbstractSeq[A]
   with strawman.collection.LinearSeq[A]
   with LinearSeqOps[A, LinkedList, LinkedList[A]]
@@ -130,7 +131,7 @@ private[mutable] final class LinkedList[A]() extends AbstractSeq[A]
   /** Determines the length of this $coll by traversing and counting every
     * node.
     */
-  override def size: Int = size0(this, 0)
+  override def length: Int = size0(this, 0)
 
   @tailrec private def size0(elem: LinkedList[A], acc: Int): Int =
     if (elem.isEmpty) acc else size0(elem.next, acc + 1)

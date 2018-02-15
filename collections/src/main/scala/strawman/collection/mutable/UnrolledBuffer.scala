@@ -43,7 +43,7 @@ import strawman.collection.immutable.Nil
   *  @author Aleksandar Prokopec
   *
   */
-@SerialVersionUID(2L)
+@SerialVersionUID(3L)
 sealed class UnrolledBuffer[T](implicit val tag: ClassTag[T])
   extends AbstractBuffer[T]
     with Buffer[T]
@@ -150,7 +150,7 @@ sealed class UnrolledBuffer[T](implicit val tag: ClassTag[T])
 
   def result() = this
 
-  override def size: Int = sz
+  def length = sz
 
   def apply(idx: Int) =
     if (idx >= 0 && idx < sz) headptr(idx)
@@ -377,7 +377,7 @@ object UnrolledBuffer extends StrictOptimizedClassTagSeqFactory[UnrolledBuffer] 
         // insert everything from iterable to this
         var curr = this
         var appended = 0
-        for (elem <- t) {
+        for (elem <- t.iterator()) {
           curr = curr append elem
           appended += 1
         }
@@ -391,7 +391,7 @@ object UnrolledBuffer extends StrictOptimizedClassTagSeqFactory[UnrolledBuffer] 
       else if (idx == size || (next eq null)) {
         var curr = this
         var appended = 0
-        for (elem <- t) {
+        for (elem <- t.iterator()) {
           curr = curr append elem
           appended += 1
         }
@@ -423,10 +423,3 @@ object UnrolledBuffer extends StrictOptimizedClassTagSeqFactory[UnrolledBuffer] 
 
 }
 
-
-// This is used by scala.collection.parallel.mutable.UnrolledParArrayCombiner:
-// Todo -- revisit whether inheritance is the best way to achieve this functionality
-private[collection] class DoublingUnrolledBuffer[T](implicit t: ClassTag[T]) extends UnrolledBuffer[T]()(t) {
-  override def calcNextLength(sz: Int) = if (sz < 10000) sz * 2 else sz
-  protected override def newUnrolled = new UnrolledBuffer.Unrolled[T](0, new Array[T](4), null, this)
-}

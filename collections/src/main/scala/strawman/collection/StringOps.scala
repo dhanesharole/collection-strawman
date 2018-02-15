@@ -25,7 +25,6 @@ final class StringOps(val s: String)
     with IterableOnce[Char]
     with collection.IndexedSeqOps[Char, immutable.IndexedSeq, String]
     with collection.StrictOptimizedIterableOps[Char, immutable.IndexedSeq, String]
-    with collection.ArrayLike[Char]
     with Ordered[String] {
 
   def toIterable = StringView(s)
@@ -43,7 +42,7 @@ final class StringOps(val s: String)
 
   protected[this] def newSpecificBuilder() = new StringBuilder
 
-  protected def finiteSize = s.length
+  def length = s.length
 
   @throws[StringIndexOutOfBoundsException]
   def apply(i: Int) = s.charAt(i)
@@ -93,6 +92,24 @@ final class StringOps(val s: String)
     for (ch <- suffix.iterator()) sb += ch
     sb.result()
   }
+
+  // Overloaded version of `padTo` that gives back a string, where the inherited
+  //  version gives back a sequence.
+  /** Returns a String with a Char appended until a given target length is reached.
+    *
+    *  @param   len   the target length
+    *  @param   elem  the padding value
+    *  @return a String consisting of
+    *          this String followed by the minimal number of occurrences of `elem` so
+    *          that the resulting String has a length of at least `len`.
+    */
+  def padTo(len: Int, elem: Char): String =
+    if(s.length >= len) s else {
+      val b = new java.lang.StringBuilder(len)
+      b.append(s)
+      while(b.length < len) b.append(elem)
+      b.toString
+    }
 
   /** Alias for `concat` */
   @`inline` def ++ (suffix: IterableOnce[Char]): String = concat(suffix)
@@ -153,7 +170,7 @@ final class StringOps(val s: String)
 
   override def slice(from: Int, until: Int): String = {
     val start = from max 0
-    val end   = until min finiteSize
+    val end   = until min length
 
     if (start >= end) newSpecificBuilder().result()
     else (newSpecificBuilder() ++= toString.substring(start, end)).result()
@@ -456,7 +473,7 @@ final class StringOps(val s: String)
 }
 
 case class StringView(s: String) extends IndexedView[Char] {
-  protected def finiteSize = s.length
+  def length = s.length
   @throws[StringIndexOutOfBoundsException]
   def apply(n: Int) = s.charAt(n)
   override def className = "StringView"

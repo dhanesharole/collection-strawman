@@ -1,7 +1,7 @@
 package strawman.collection
 package mutable
 
-import scala.{Long, AnyRef, Boolean, NoSuchElementException, Some, None, Option, Unit, Int, Array, Serializable, Nothing, math, deprecated}
+import scala.{Long, AnyRef, Boolean, NoSuchElementException, Some, None, Option, Unit, Int, Array, Serializable, SerialVersionUID, Nothing, math, deprecated}
 
 /** This class implements mutable maps with `Long` keys based on a hash table with open addressing.
   *
@@ -23,6 +23,7 @@ import scala.{Long, AnyRef, Boolean, NoSuchElementException, Some, None, Option,
   *  rapidly as 2^30 is approached.
   *
   */
+@SerialVersionUID(3L)
 final class LongMap[V] private[collection] (defaultEntry: Long => V, initialBufferSize: Int, initBlank: Boolean)
   extends Map[Long, V]
     with MapOps[Long, V, Map, LongMap[V]]
@@ -517,6 +518,10 @@ final class LongMap[V] private[collection] (defaultEntry: Long => V, initialBuff
     }
     this
   }
+
+  def map[V2](f: ((Long, V)) => (Long, V2)): LongMap[V2] = LongMap.from(View.Map(coll, f))
+
+  def flatMap[V2](f: ((Long, V)) => IterableOnce[(Long, V2)]): LongMap[V2] = LongMap.from(View.FlatMap(coll, f))
 }
 
 object LongMap {

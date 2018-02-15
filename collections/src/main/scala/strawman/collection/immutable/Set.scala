@@ -7,11 +7,7 @@ import strawman.collection.mutable.Builder
 import scala.{Any, Boolean, Int, deprecatedName, `inline`, None, Option, Serializable, SerialVersionUID, Some, Unit}
 
 /** Base trait for immutable set collections */
-trait Set[A] extends Iterable[A] with collection.Set[A] with SetOps[A, Set, Set[A]] {
-
-  override final def toSet[B >: A]: Set[B] = this.asInstanceOf[Set[B]]
-
-}
+trait Set[A] extends Iterable[A] with collection.Set[A] with SetOps[A, Set, Set[A]]
 
 /** Base trait for immutable set operations
   *
@@ -53,8 +49,6 @@ trait SetOps[A, +CC[X], +C <: SetOps[A, CC, C]]
 
   def diff(that: collection.Set[A]): C =
     toIterable.foldLeft(empty)((result, elem) => if (that contains elem) result else result + elem)
-
-  override def toSet[B >: A]: Set[B] = this.asInstanceOf[Set[B]]
 }
 
 /**
@@ -90,7 +84,7 @@ object Set extends IterableFactory[Set] {
   }
 
   /** An optimized representation for immutable empty sets */
-  @SerialVersionUID(-2443710944435909512L)
+  @SerialVersionUID(3L)
   private object EmptySet extends Set[Any] with SmallSet[Any] with Serializable {
     override def size: Int = 0
     def contains(elem: Any): Boolean = false
@@ -102,7 +96,7 @@ object Set extends IterableFactory[Set] {
   private[collection] def emptyInstance: Set[Any] = EmptySet
 
   /** An optimized representation for immutable sets of size 1 */
-  @SerialVersionUID(1233385750652442003L)
+  @SerialVersionUID(3L)
   final class Set1[A] private[collection] (elem1: A) extends Set[A] with SmallSet[A] with Serializable {
     override def size: Int = 1
     def contains(elem: A): Boolean = elem == elem1
@@ -124,7 +118,7 @@ object Set extends IterableFactory[Set] {
   }
 
   /** An optimized representation for immutable sets of size 2 */
-  @SerialVersionUID(-6443011234944830092L)
+  @SerialVersionUID(3L)
   final class Set2[A] private[collection] (elem1: A, elem2: A) extends Set[A] with SmallSet[A] with Serializable {
     override def size: Int = 2
     def contains(elem: A): Boolean = elem == elem1 || elem == elem2
@@ -155,7 +149,7 @@ object Set extends IterableFactory[Set] {
   }
 
   /** An optimized representation for immutable sets of size 3 */
-  @SerialVersionUID(-3590273538119220064L)
+  @SerialVersionUID(3L)
   final class Set3[A] private[collection] (elem1: A, elem2: A, elem3: A) extends Set[A] with SmallSet[A] with Serializable {
     override def size: Int = 3
     def contains(elem: A): Boolean =
@@ -189,7 +183,7 @@ object Set extends IterableFactory[Set] {
   }
 
   /** An optimized representation for immutable sets of size 4 */
-  @SerialVersionUID(-3622399588156184395L)
+  @SerialVersionUID(3L)
   final class Set4[A] private[collection] (elem1: A, elem2: A, elem3: A, elem4: A) extends Set[A] with SmallSet[A] with Serializable {
     override def size: Int = 4
     def contains(elem: A): Boolean =

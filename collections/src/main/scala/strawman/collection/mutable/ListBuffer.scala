@@ -30,7 +30,7 @@ import scala.Predef.{assert, intWrapper}
   *  @define mayNotTerminateInf
   *  @define willNotTerminateInf
   */
-@SerialVersionUID(3419063961353022662L)
+@SerialVersionUID(3L)
 class ListBuffer[A]
   extends Buffer[A]
      with SeqOps[A, ListBuffer, ListBuffer[A]]
@@ -54,7 +54,7 @@ class ListBuffer[A]
   @throws[IndexOutOfBoundsException]
   def apply(i: Int) = first.apply(i)
 
-  override def size = len
+  def length = len
   override def knownSize = len
 
   override def isEmpty: Boolean = len == 0

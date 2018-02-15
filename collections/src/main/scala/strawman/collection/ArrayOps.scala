@@ -3,7 +3,7 @@ package collection
 
 import scala.{AnyVal, Array, ArrayIndexOutOfBoundsException, Char, Int, throws, Boolean, Serializable, Unit, `inline`}
 import scala.Predef.???
-import mutable.{ArrayBuffer, GrowableBuilder}
+import mutable.{ArrayBuffer, GrowableBuilder, WrappedArray}
 import immutable.ImmutableArray
 import scala.reflect.ClassTag
 
@@ -22,8 +22,7 @@ object ArrayOps {
 class ArrayOps[A](val xs: Array[A]) extends AnyVal
   with IterableOnce[A]
   with IndexedSeqOps[A, immutable.IndexedSeq, Array[A]]
-  with StrictOptimizedSeqOps[A, Seq, Array[A]]
-  with ArrayLike[A] {
+  with StrictOptimizedSeqOps[A, Seq, Array[A]] {
 
   protected def fromTaggedIterable[B: ClassTag](coll: Iterable[B]): Array[B] = coll.toArray[B]
 
@@ -33,7 +32,7 @@ class ArrayOps[A](val xs: Array[A]) extends AnyVal
   protected[this] def coll: Array[A] = xs
   override def toSeq: immutable.Seq[A] = fromIterable(toIterable)
 
-  protected def finiteSize = xs.length
+  def length = xs.length
   @throws[ArrayIndexOutOfBoundsException]
   def apply(i: Int) = xs.apply(i)
 
@@ -59,6 +58,21 @@ class ArrayOps[A](val xs: Array[A]) extends AnyVal
   }
 
   def flatMap[B: ClassTag](f: A => IterableOnce[B]): Array[B] = fromTaggedIterable(View.FlatMap(toIterable, f))
+
+  def flatMap[BS, B](f: A => BS)(implicit asIterable: BS => Iterable[B], m: ClassTag[B]): Array[B] =
+    fromTaggedIterable(View.FlatMap(toIterable, (x: A) => asIterable(f(x))))
+
+  def flatten[B](implicit asIterable: A => strawman.collection.Iterable[B], m: ClassTag[B]): Array[B] = {
+    val b = WrappedArray.newBuilder[B]().mapResult(_.toArray)
+    val sizes = super.map {
+      case is: IndexedSeq[_] => is.size
+      case _ => 0
+    }
+    b.sizeHint(sizes.sum)
+    for (xs <- this)
+      b ++= asIterable(xs)
+    b.result()
+  }
 
   @`inline` final def ++[B >: A : ClassTag](xs: Iterable[B]): Array[B] = appendedAll(xs)
 

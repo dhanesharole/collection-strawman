@@ -1,7 +1,7 @@
 package strawman.collection
 package mutable
 
-import scala.{Unit, Int, Array, Boolean, Any, Byte, Short, Char, Long, Float, Double, AnyRef, Serializable, specialized}
+import scala.{Unit, Int, Array, Boolean, Any, Byte, Short, Char, Long, Float, Double, AnyRef, Serializable, SerialVersionUID, specialized}
 import scala.Predef.{Class, implicitly}
 import scala.runtime.ScalaRunTime
 import scala.reflect.ClassTag
@@ -25,11 +25,11 @@ import java.util.Arrays
   *  @define mayNotTerminateInf
   *  @define willNotTerminateInf
   */
+@SerialVersionUID(3L)
 abstract class WrappedArray[T]
   extends AbstractSeq[T]
     with IndexedSeq[T]
     with IndexedSeqOps[T, WrappedArray, WrappedArray[T]]
-    with ArrayLike[T]
     with IndexedOptimizedSeq[T]
     with StrictOptimizedSeqOps[T, WrappedArray, WrappedArray[T]]
     with Serializable {
@@ -112,9 +112,10 @@ object WrappedArray extends StrictOptimizedClassTagSeqFactory[WrappedArray] { se
     case x: Array[Unit]    => new ofUnit(x)
   }).asInstanceOf[WrappedArray[T]]
 
+  @SerialVersionUID(3L)
   final class ofRef[T <: AnyRef](val array: Array[T]) extends WrappedArray[T] with Serializable {
     lazy val elemTag = ClassTag[T](array.getClass.getComponentType)
-    protected def finiteSize: Int = array.length
+    def length: Int = array.length
     def apply(index: Int): T = array(index).asInstanceOf[T]
     def update(index: Int, elem: T): Unit = { array(index) = elem }
     override def hashCode = wrappedArrayHash(array)
@@ -124,9 +125,10 @@ object WrappedArray extends StrictOptimizedClassTagSeqFactory[WrappedArray] { se
     }
   }
 
+  @SerialVersionUID(3L)
   final class ofByte(val array: Array[Byte]) extends WrappedArray[Byte] with Serializable {
     def elemTag = ClassTag.Byte
-    protected def finiteSize: Int = array.length
+    def length: Int = array.length
     def apply(index: Int): Byte = array(index)
     def update(index: Int, elem: Byte): Unit = { array(index) = elem }
     override def hashCode = wrappedBytesHash(array)
@@ -136,9 +138,10 @@ object WrappedArray extends StrictOptimizedClassTagSeqFactory[WrappedArray] { se
     }
   }
 
+  @SerialVersionUID(3L)
   final class ofShort(val array: Array[Short]) extends WrappedArray[Short] with Serializable {
     def elemTag = ClassTag.Short
-    protected def finiteSize: Int = array.length
+    def length: Int = array.length
     def apply(index: Int): Short = array(index)
     def update(index: Int, elem: Short): Unit = { array(index) = elem }
     override def hashCode = wrappedArrayHash(array)
@@ -148,9 +151,10 @@ object WrappedArray extends StrictOptimizedClassTagSeqFactory[WrappedArray] { se
     }
   }
 
+  @SerialVersionUID(3L)
   final class ofChar(val array: Array[Char]) extends WrappedArray[Char] with Serializable {
     def elemTag = ClassTag.Char
-    protected def finiteSize: Int = array.length
+    def length: Int = array.length
     def apply(index: Int): Char = array(index)
     def update(index: Int, elem: Char): Unit = { array(index) = elem }
     override def hashCode = wrappedArrayHash(array)
@@ -160,9 +164,10 @@ object WrappedArray extends StrictOptimizedClassTagSeqFactory[WrappedArray] { se
     }
   }
 
+  @SerialVersionUID(3L)
   final class ofInt(val array: Array[Int]) extends WrappedArray[Int] with Serializable {
     def elemTag = ClassTag.Int
-    protected def finiteSize: Int = array.length
+    def length: Int = array.length
     def apply(index: Int): Int = array(index)
     def update(index: Int, elem: Int): Unit = { array(index) = elem }
     override def hashCode = wrappedArrayHash(array)
@@ -172,9 +177,10 @@ object WrappedArray extends StrictOptimizedClassTagSeqFactory[WrappedArray] { se
     }
   }
 
+  @SerialVersionUID(3L)
   final class ofLong(val array: Array[Long]) extends WrappedArray[Long] with Serializable {
     def elemTag = ClassTag.Long
-    protected def finiteSize: Int = array.length
+    def length: Int = array.length
     def apply(index: Int): Long = array(index)
     def update(index: Int, elem: Long): Unit = { array(index) = elem }
     override def hashCode = wrappedArrayHash(array)
@@ -184,9 +190,10 @@ object WrappedArray extends StrictOptimizedClassTagSeqFactory[WrappedArray] { se
     }
   }
 
+  @SerialVersionUID(3L)
   final class ofFloat(val array: Array[Float]) extends WrappedArray[Float] with Serializable {
     def elemTag = ClassTag.Float
-    protected def finiteSize: Int = array.length
+    def length: Int = array.length
     def apply(index: Int): Float = array(index)
     def update(index: Int, elem: Float): Unit = { array(index) = elem }
     override def hashCode = wrappedArrayHash(array)
@@ -196,9 +203,10 @@ object WrappedArray extends StrictOptimizedClassTagSeqFactory[WrappedArray] { se
     }
   }
 
+  @SerialVersionUID(3L)
   final class ofDouble(val array: Array[Double]) extends WrappedArray[Double] with Serializable {
     def elemTag = ClassTag.Double
-    protected def finiteSize: Int = array.length
+    def length: Int = array.length
     def apply(index: Int): Double = array(index)
     def update(index: Int, elem: Double): Unit = { array(index) = elem }
     override def hashCode = wrappedArrayHash(array)
@@ -208,9 +216,10 @@ object WrappedArray extends StrictOptimizedClassTagSeqFactory[WrappedArray] { se
     }
   }
 
+  @SerialVersionUID(3L)
   final class ofBoolean(val array: Array[Boolean]) extends WrappedArray[Boolean] with Serializable {
     def elemTag = ClassTag.Boolean
-    protected def finiteSize: Int = array.length
+    def length: Int = array.length
     def apply(index: Int): Boolean = array(index)
     def update(index: Int, elem: Boolean): Unit = { array(index) = elem }
     override def hashCode = wrappedArrayHash(array)
@@ -220,9 +229,10 @@ object WrappedArray extends StrictOptimizedClassTagSeqFactory[WrappedArray] { se
     }
   }
 
+  @SerialVersionUID(3L)
   final class ofUnit(val array: Array[Unit]) extends WrappedArray[Unit] with Serializable {
     def elemTag = ClassTag.Unit
-    protected def finiteSize: Int = array.length
+    def length: Int = array.length
     def apply(index: Int): Unit = array(index)
     def update(index: Int, elem: Unit): Unit = { array(index) = elem }
     override def hashCode = wrappedArrayHash(array)
