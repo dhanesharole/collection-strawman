@@ -243,7 +243,7 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
     * @return The original [[collection.mutable.StringBuilder]] containing the
     * resulting string.
     */
-  def toStringBuilder(b: StringBuilder): StringBuilder = {
+  protected def toStringBuilder(b: StringBuilder): StringBuilder = {
     if (!isEmpty) {
       if (headDefined && !tailDefined) b append head // For LazyList, head is also Lazy. Hence adds `?` if it not defined yet
       if (!headDefined && tailDefined) b append "?" // For LazyList, head is also Lazy. Hence adds `?` if it not defined yet
@@ -469,7 +469,7 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
 
   override final def zipWithIndex: CC[(A, Int)] = this.zip(LazyList.from(0))
 
-  def toStringBuilder(b: StringBuilder): StringBuilder
+  protected def toStringBuilder(b: StringBuilder): StringBuilder
 
   override def toString: String = {
     s"$className${toStringBuilder(new StringBuilder).mkString("(", ", ", ")")}"
@@ -709,7 +709,7 @@ sealed abstract class Stream[+A] extends LinearSeq[A] with LazyListOps[A, Stream
     * @return The original [[collection.mutable.StringBuilder]] containing the
     * resulting string.
     */
-  def toStringBuilder(b: StringBuilder): StringBuilder = {
+  protected def toStringBuilder(b: StringBuilder): StringBuilder = {
     if (!isEmpty) {
       b append head
       var cursor = this
