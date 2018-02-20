@@ -232,7 +232,7 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
     *  `end`. Inside, the string representations of defined elements (w.r.t.
     *  the method `toString()`) are separated by the string `sep`. The method will
     *  not force evaluation of undefined elements. A tail of such elements will be
-    * represented by a `"?"` instead.  A cyclic stream is represented by a `"-"`
+    * represented by a `"?"` instead.  A cyclic stream is represented by a `"..."`
     * at the point where the cycle repeats.
     *
     * @param b The [[collection.mutable.StringBuilder]] factory to which we need
@@ -243,11 +243,17 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
     * @return The original [[collection.mutable.StringBuilder]] containing the
     * resulting string.
     */
-  protected def toStringBuilder(b: StringBuilder): StringBuilder = {
+  protected def toStringBuilder(b: StringBuilder, start: String, sep: String, end: String): StringBuilder = {
+    b append start
     if (!isEmpty) {
       if (headDefined && !tailDefined) b append head // For LazyList, head is also Lazy. Hence adds `?` if it not defined yet
       if (!headDefined && tailDefined) b append "?" // For LazyList, head is also Lazy. Hence adds `?` if it not defined yet
       if (headDefined && tailDefined) b append head
+      if (!headDefined && !tailDefined) {
+        // nothing to evaluate. Bail out early
+        b append "?" append end
+        return b
+      }
       var cursor = this
       var n = 1
       if (cursor.tailDefined) {  // If tailDefined, also !isEmpty
@@ -262,7 +268,7 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
             scout = scout.tail
             // Use 2x 1x iterator trick for cycle detection; slow iterator can add strings
             while ((cursor ne scout) && scout.tailDefined) {
-              if (cursor.headDefined) b append cursor.head
+              if (cursor.headDefined) b append sep append cursor.head
               n += 1
               cursor = cursor.tail
               scout = scout.tail
@@ -272,12 +278,12 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
         }
         if (!scout.tailDefined) {  // Not a cycle, scout hit an end
           while (cursor ne scout) {
-            if (cursor.headDefined) b append cursor.head
+            if (cursor.headDefined) b append sep append cursor.head
             n += 1
             cursor = cursor.tail
           }
           if (cursor.nonEmpty) {
-            if (cursor.headDefined) b append cursor.head
+            if (cursor.headDefined) b append sep append cursor.head
           }
         }
         else {
@@ -303,12 +309,12 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
           // advance one first unless runner didn't go anywhere (in which case
           // we've already looped once).
           if ((cursor eq scout) && (k > 0)) {
-            if (cursor.headDefined) b append cursor.head
+            if (cursor.headDefined) b append sep append cursor.head
             n += 1
             cursor = cursor.tail
           }
           while (cursor ne scout) {
-            if (cursor.headDefined) b append cursor.head
+            if (cursor.headDefined) b append sep append cursor.head
             n += 1
             cursor = cursor.tail
           }
@@ -319,14 +325,11 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
       }
       if (!cursor.isEmpty) {
         // Either undefined or cyclic; we can check with tailDefined
-        if (!cursor.tailDefined) b append "?"
-        else b append "-"
-        // Originally, it would used to print `"..."` from the point at which cycle starts.
-        // But here we are using mkString to create final result. Using `"..."` turns each `"."` into separate character.
-        // Hence using `"-"` this symbol.
+        if (!cursor.tailDefined) b append sep append "?"
+        else b append sep append "..."
       }
     }
-    b
+    b append end
   }
 
 }
@@ -469,10 +472,10 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
 
   override final def zipWithIndex: CC[(A, Int)] = this.zip(LazyList.from(0))
 
-  protected def toStringBuilder(b: StringBuilder): StringBuilder
+  protected def toStringBuilder(b: StringBuilder, start: String, sep: String, end: String): StringBuilder
 
   override def toString: String = {
-    s"$className${toStringBuilder(new StringBuilder).mkString("(", ", ", ")")}"
+    s"$className${toStringBuilder(new StringBuilder, "(", ", ", ")").result()}"
   }
 }
 
@@ -698,7 +701,7 @@ sealed abstract class Stream[+A] extends LinearSeq[A] with LazyListOps[A, Stream
     *  `end`. Inside, the string representations of defined elements (w.r.t.
     *  the method `toString()`) are separated by the string `sep`. The method will
     *  not force evaluation of undefined elements. A tail of such elements will be
-    * represented by a `"?"` instead.  A cyclic stream is represented by a `"-"`
+    * represented by a `"?"` instead.  A cyclic stream is represented by a `"..."`
     * at the point where the cycle repeats.
     *
     * @param b The [[collection.mutable.StringBuilder]] factory to which we need
@@ -709,7 +712,8 @@ sealed abstract class Stream[+A] extends LinearSeq[A] with LazyListOps[A, Stream
     * @return The original [[collection.mutable.StringBuilder]] containing the
     * resulting string.
     */
-  protected def toStringBuilder(b: StringBuilder): StringBuilder = {
+  protected def toStringBuilder(b: StringBuilder, start: String, sep: String, end: String): StringBuilder = {
+    b append start
     if (!isEmpty) {
       b append head
       var cursor = this
@@ -726,7 +730,7 @@ sealed abstract class Stream[+A] extends LinearSeq[A] with LazyListOps[A, Stream
             scout = scout.tail
             // Use 2x 1x iterator trick for cycle detection; slow iterator can add strings
             while ((cursor ne scout) && scout.tailDefined) {
-              b append cursor.head
+              b append sep append cursor.head
               n += 1
               cursor = cursor.tail
               scout = scout.tail
@@ -736,12 +740,12 @@ sealed abstract class Stream[+A] extends LinearSeq[A] with LazyListOps[A, Stream
         }
         if (!scout.tailDefined) {  // Not a cycle, scout hit an end
           while (cursor ne scout) {
-            b append cursor.head
+            b append sep append cursor.head
             n += 1
             cursor = cursor.tail
           }
           if (cursor.nonEmpty) {
-            b append cursor.head
+            b append sep append cursor.head
           }
         }
         else {
@@ -767,12 +771,12 @@ sealed abstract class Stream[+A] extends LinearSeq[A] with LazyListOps[A, Stream
           // advance one first unless runner didn't go anywhere (in which case
           // we've already looped once).
           if ((cursor eq scout) && (k > 0)) {
-            b append cursor.head
+            b append sep append cursor.head
             n += 1
             cursor = cursor.tail
           }
           while (cursor ne scout) {
-            b append cursor.head
+            b append sep append cursor.head
             n += 1
             cursor = cursor.tail
           }
@@ -783,14 +787,11 @@ sealed abstract class Stream[+A] extends LinearSeq[A] with LazyListOps[A, Stream
       }
       if (!cursor.isEmpty) {
         // Either undefined or cyclic; we can check with tailDefined
-        if (!cursor.tailDefined) b append "?"
-        else b append "-"
-        // Originally, it would used to print `"..."` from the point at which cycle starts.
-        // But here we are using mkString to create final result. Using `"..."` turns each `"."` into separate character.
-        // Hence using `"-"` this symbol.
+        if (!cursor.tailDefined) b append sep append "?"
+        else b append sep append "..."
       }
     }
-    b
+    b append end
   }
 
 }

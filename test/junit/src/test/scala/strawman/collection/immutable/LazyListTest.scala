@@ -196,7 +196,7 @@ class LazyListTest {
     cyc.tail.tail.head
     cyc.tail.tail.tail.head
     cyc.tail.tail.tail.tail.head
-    assertEquals("LazyList(1, 2, 3, 4, -)", cyc.toString)
+    assertEquals("LazyList(1, 2, 3, 4, ...)", cyc.toString)
   }
 
   def hasCorrectDrop(): Unit = {

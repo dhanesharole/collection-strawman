@@ -192,6 +192,6 @@ class StreamTest {
   def testStreamToStringWhenStreamHasCyclicReference: Unit = {
     lazy val cyc: Stream[Int] = 1 #:: 2 #:: 3 #:: 4 #:: cyc
     cyc.tail.tail.tail.tail
-    assertEquals("Stream(1, 2, 3, 4, -)", cyc.toString)
+    assertEquals("Stream(1, 2, 3, 4, ...)", cyc.toString)
   }
 }
