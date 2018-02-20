@@ -35,16 +35,14 @@ final class LongMap[V] private[collection] (defaultEntry: Long => V, initialBuff
   def this() = this(LongMap.exceptionDefault, 16, true)
 
   def clear(): Unit = { keysIterator() foreach -= } // TODO optimize
-  protected[this] def fromSpecificIterable(coll: strawman.collection.Iterable[(Long, V)]): LongMap[V] = {
+  override protected[this] def fromSpecificIterable(coll: strawman.collection.Iterable[(Long, V)]): LongMap[V] = {
     //TODO should this be the default implementation of this method in StrictOptimizedIterableOps?
     val b = newSpecificBuilder()
     b.sizeHint(coll)
     b.addAll(coll)
     b.result()
   }
-  protected[this] def newSpecificBuilder(): Builder[(Long, V),LongMap[V]] = new GrowableBuilder(LongMap.empty[V])
-  def mapFactory: strawman.collection.MapFactory[Map] = Map
-  protected[this] def mapFromIterable[K2, V2](it: strawman.collection.Iterable[(K2, V2)]): Map[K2,V2] = mapFactory.from(it)
+  override protected[this] def newSpecificBuilder(): Builder[(Long, V),LongMap[V]] = new GrowableBuilder(LongMap.empty[V])
 
   /** Creates a new `LongMap` that returns default values according to a supplied key-value mapping. */
   def this(defaultEntry: Long => V) = this(defaultEntry, 16, true)

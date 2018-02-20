@@ -26,6 +26,10 @@ trait Iterable[+A] extends IterableOnce[A] with IterableOps[A, Iterable, Iterabl
   //TODO scalac generates an override for this in AbstractMap; Making it final leads to a VerifyError
   protected[this] def coll: this.type = this
 
+  protected[this] def fromSpecificIterable(coll: Iterable[A]): IterableCC[A] = iterableFactory.from(coll)
+  protected[this] def newSpecificBuilder(): Builder[A, IterableCC[A]] = iterableFactory.newBuilder[A]()
+
+  def iterableFactory: IterableFactory[IterableCC] = Iterable
 }
 
 /** Base trait for Iterable operations
@@ -64,6 +68,8 @@ trait Iterable[+A] extends IterableOnce[A] with IterableOps[A, Iterable, Iterabl
   */
 trait IterableOps[+A, +CC[_], +C] extends Any with IterableOnce[A] {
 
+  protected[this] type IterableCC[X] = CC[X]
+
   /**
     * @return This collection as an `Iterable[A]`. No new collection will be built if `this` is already an `Iterable[A]`.
     */
@@ -91,7 +97,7 @@ trait IterableOps[+A, +CC[_], +C] extends Any with IterableOnce[A] {
   /**
     * @return The companion object of this ${coll}, providing various factory methods.
     */
-  def iterableFactory: IterableFactory[CC]
+  def iterableFactory: IterableFactory[IterableCC]
 
   /**
     * @return a strict builder for the same collection type.
@@ -386,18 +392,49 @@ trait IterableOps[+A, +CC[_], +C] extends Any with IterableOnce[A] {
     if (knownSize >= 0) copyToArray(new Array[B](knownSize), 0)
     else ArrayBuffer.from(this).toArray[B]
 
-  /** Copy all elements of this collection to array `xs`, starting at `start`. */
-  def copyToArray[B >: A](xs: Array[B], start: Int = 0): xs.type = {
-    var i = start
-    val it = iterator()
-    while (it.hasNext) {
-      xs(i) = it.next()
-      i += 1
-    }
-    xs
-  }
+  /** Copy elements of this collection to an array.
+   *  Fills the given array `xs` starting at index `start`.
+   *  Copying will stop once either the all elements of this collection have been copied,
+   *  or the end of the array is reached.
+   *
+   *  @param  xs     the array to fill.
+   *  @param  start  the starting index.
+   *  @tparam B      the type of the elements of the array.
+   *
+   *  @usecase def copyToArray(xs: Array[A], start: Int): Unit
+   *
+   *    $willNotTerminateInf
+   */
+  def copyToArray[B >: A](xs: Array[B], start: Int = 0): xs.type = iterator().copyToArray(xs, start)
+
+  /** Copy elements of this collection to an array.
+   *  Fills the given array `xs` starting at index `start` with at most
+   *  `len` values produced by this iterator.
+   *  Copying will stop once either the all elements of this collection have been copied,
+   *  or the end of the array is reached, or `len` elements have been copied.
+   *
+   *  @param  xs     the array to fill.
+   *  @param  start  the starting index.
+   *  @param  len    the maximal number of elements to copy.
+   *  @tparam B      the type of the elements of the array.
+   *
+   *  @note    Reuse: $consumesIterator
+   *
+   *  @usecase def copyToArray(xs: Array[A], start: Int, len: Int): Unit
+   *
+   *    $willNotTerminateInf
+   */
+  def copyToArray[B >: A](xs: Array[B], start: Int, len: Int): xs.type = iterator().copyToArray(xs, start, len)
 
   /** Defines the prefix of this object's `toString` representation.
+    *
+    * It is recommended to return the name of the concrete collection type, but
+    * not implementation subclasses. For example, for `ListMap` this method should
+    * return `"ListMap"`, not `"Map"` (the supertype) or `"Node"` (an implementation
+    * subclass).
+    *
+    * It is recommended to overwrite this method even if the default implementation
+    * returns the correct name, to avoid the implementation using reflection.
     *
     *  @return  a string representation which starts the result of `toString`
     *           applied to this $coll. By default the string prefix is the

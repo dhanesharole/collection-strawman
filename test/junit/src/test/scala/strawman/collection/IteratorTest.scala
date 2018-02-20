@@ -315,4 +315,91 @@ class IteratorTest {
 
     assertEquals("a,null,b,null,c,null", it.mkString(","))
   }
+
+  @Test
+  def emptyTypedIteratorsShouldBeEqual: Unit = {
+    val emptyDoubleIterator = Iterator.empty[Double]
+    val emptyIntIterator = Iterator.empty[Int]
+    assertSame(emptyDoubleIterator, emptyIntIterator)
+  }
+
+  @Test
+  def emptyIteratorInHigherOrderFunctions: Unit = {
+    val seqOfIterators = Seq(Seq(1, 2, 3).iterator(), Seq(3, 2, 1).iterator(), Seq(1, 3, 2).iterator())
+    val unified = seqOfIterators.foldLeft(Iterator.empty[Int])((a, b) => a ++ b)
+    assertEquals(List(1, 2, 3, 3, 2, 1, 1, 3, 2), List.from(unified))
+  }
+
+  @Test
+  def emptyIteratorBuilder: Unit = {
+    assertSame(Iterator.empty[Int], Iterator.newBuilder[Int]().result())
+  }
+
+  @Test
+  def nonEmptyIteratorBuilder: Unit = {
+    var iteratorBuilder = Iterator.newBuilder[Int]()
+    iteratorBuilder += 5
+    iteratorBuilder += 4
+    iteratorBuilder += 3
+    assertEquals(List(5, 4, 3), List.from(iteratorBuilder.result()))
+  }
+
+  @Test
+  def nonEmptyIteratorAndClearBuilder: Unit = {
+    var iteratorBuilder = Iterator.newBuilder[Int]()
+    iteratorBuilder += 1
+    iteratorBuilder.clear()
+    assertSame(Iterator.empty, iteratorBuilder.result())
+  }
+
+  @Test def copyToArray(): Unit = {
+    def check(a: Array[Int], start: Int, end: Int) = {
+      var i = 0
+      while (i < start) {
+        assert(a(i) == 0)
+        i += 1
+      }
+      while (i < a.length && i < end) {
+        assert(a(i) == i - start)
+        i += 1
+      }
+      while (i < a.length) {
+        assert(a(i) == 0)
+        i += 1
+      }
+    }
+
+    val far = 100000
+    def l = Iterable.from(Range(0, 100)).iterator()
+    check(l.copyToArray(new Array(100)),
+      0, far)
+    check(l.copyToArray(new Array(10)),
+      0, far)
+    check(l.copyToArray(new Array(1000)),
+      0, 100)
+
+    check(l.copyToArray(new Array(100), 5),
+      5, 105)
+    check(l.copyToArray(new Array(10), 5),
+      5, 10)
+    check(l.copyToArray(new Array(1000), 5),
+      5, 105)
+
+    check(l.copyToArray(new Array(100), 5, 50),
+      5, 55)
+    check(l.copyToArray(new Array(10), 5, 50),
+      5, 10)
+    check(l.copyToArray(new Array(1000), 5, 50),
+      5, 55)
+
+    assertThrows[ArrayIndexOutOfBoundsException](l.copyToArray(new Array(10), -1))
+    assertThrows[ArrayIndexOutOfBoundsException](l.copyToArray(new Array(10), -1, 10))
+
+    check(l.copyToArray(new Array(10), 10),
+      0, 0)
+    check(l.copyToArray(new Array(10), 10, 10),
+      0, 0)
+    check(l.copyToArray(new Array(10), 0, -1),
+      0, 0)
+  }
 }

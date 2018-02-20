@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
 
 import scala.{Any, AnyRef, Array, Boolean, IllegalArgumentException, Int, NoSuchElementException, None, Nothing, Numeric, Option, Ordering, PartialFunction, Some, StringContext, Unit, UnsupportedOperationException, `inline`, math, throws}
 import scala.Predef.{identity, intWrapper, require, String}
-import strawman.collection.mutable.{ArrayBuffer, StringBuilder}
+import strawman.collection.mutable.{ArrayBuffer, Builder, ImmutableBuilder, StringBuilder}
 
 import scala.annotation.tailrec
 import scala.annotation.unchecked.uncheckedVariance
@@ -387,7 +387,7 @@ trait Iterator[+A] extends IterableOnce[A] { self =>
     while (hasNext) reversed = next() :: reversed
     reversed.foldLeft(z)((b, a) => op(a, b))
   }
-  
+
   /** Produces a collection containing cumulative results of applying the
    *  operator going left to right.
    *
@@ -1233,6 +1233,57 @@ trait Iterator[+A] extends IterableOnce[A] { self =>
     b
   }
 
+  /** Copy values produced by this iterator to an array.
+   *  Fills the given array `xs` starting at index `start`.
+   *  Copying will stop once either the end of the current iterator is reached,
+   *  or the end of the array is reached.
+   *
+   *  @param  xs     the array to fill.
+   *  @param  start  the starting index.
+   *  @tparam B      the type of the elements of the array.
+   *
+   *  @note    Reuse: $consumesIterator
+   *
+   *  @usecase def copyToArray(xs: Array[A], start: Int): Unit
+   *
+   *    $willNotTerminateInf
+   */
+  @`inline` final def copyToArray[B >: A](xs: Array[B], start: Int = 0): xs.type = {
+    var i = start
+    while (i < xs.length && hasNext) {
+      xs(i) = next()
+      i += 1
+    }
+    xs
+  }
+
+  /** Copy values produced by this iterator to an array.
+   *  Fills the given array `xs` starting at index `start` with at most
+   *  `len` values produced by this iterator.
+   *  Copying will stop once either the end of the current iterator is reached,
+   *  or the end of the array is reached, or `len` elements have been copied.
+   *
+   *  @param  xs     the array to fill.
+   *  @param  start  the starting index.
+   *  @param  len    the maximal number of elements to copy.
+   *  @tparam B      the type of the elements of the array.
+   *
+   *  @note    Reuse: $consumesIterator
+   *
+   *  @usecase def copyToArray(xs: Array[A], start: Int, len: Int): Unit
+   *
+   *    $willNotTerminateInf
+   */
+  def copyToArray[B >: A](xs: Array[B], start: Int, len: Int): xs.type = {
+    var i = start
+    val end = start + math.min(len, xs.length - start)
+    while (i < end && hasNext) {
+      xs(i) = next()
+      i += 1
+    }
+    xs
+  }
+
   /** Converts this Iterator into another collection.
     *  @return a new collection containing all elements of this Iterator.
     *  @tparam C The collection type to build.
@@ -1241,14 +1292,32 @@ trait Iterator[+A] extends IterableOnce[A] { self =>
     */
   def to[C](factory: Factory[A, C]): C = factory.fromSpecific(self)
 
+  /** Converts this iterator to a string.
+   *
+   *  @return `"empty iterator"` or `"non-empty iterator"`, depending on
+   *           whether or not the iterator is empty.
+   *  @note    Reuse: $preservesIterator
+   */
+  override def toString = (if (hasNext) "non-empty" else "empty")+" iterator"
 }
 
-object Iterator {
+object Iterator extends IterableFactory[Iterator] {
 
-  val empty: Iterator[Nothing] = new AbstractIterator[Nothing] {
+  private[this] val _empty: Iterator[Nothing] = new AbstractIterator[Nothing] {
     def hasNext = false
     def next() = throw new NoSuchElementException("next on empty iterator")
   }
+
+  /** Creates a target $coll from an existing source collection
+    *
+    * @param source Source collection
+    * @tparam A the type of the collection’s elements
+    * @return a new $coll with the elements of `source`
+    */
+  override def from[A](source: IterableOnce[A]): Iterator[A] = source.iterator()
+
+  /** The iterator which produces no values. */
+  @`inline` final def empty[T]: Iterator[T] = _empty
 
   def single[A](a: A): Iterator[A] = new AbstractIterator[A] {
     private var consumed: Boolean = false
@@ -1256,10 +1325,19 @@ object Iterator {
     def next() = if (consumed) empty.next() else { consumed = true; a }
   }
 
-  def apply[A](xs: A*): Iterator[A] = new IndexedView[A] {
+  override def apply[A](xs: A*): Iterator[A] = new IndexedView[A] {
     val length = xs.length
     def apply(n: Int) = xs(n)
   }.iterator()
+
+  /**
+    * @return A builder for $Coll objects.
+    * @tparam A the type of the ${coll}’s elements
+    */
+  def newBuilder[A](): Builder[A, Iterator[A]] =
+    new ImmutableBuilder[A, Iterator[A]](empty[A]) {
+      override def addOne(elem: A): this.type = { elems = elems ++ single(elem); this }
+    }
 
   /** Creates iterator that produces the results of some element computation a number of times.
     *
@@ -1267,7 +1345,7 @@ object Iterator {
     *  @param   elem the element computation
     *  @return  An iterator that produces the results of `n` evaluations of `elem`.
     */
-  def fill[A](len: Int)(elem: => A): Iterator[A] = new AbstractIterator[A] {
+  override def fill[A](len: Int)(elem: => A): Iterator[A] = new AbstractIterator[A] {
     private var i = 0
     def hasNext: Boolean = i < len
     def next(): A =
@@ -1281,7 +1359,7 @@ object Iterator {
     *  @param  f   The function computing element values
     *  @return An iterator that produces the values `f(0), ..., f(n -1)`.
     */
-  def tabulate[A](end: Int)(f: Int => A): Iterator[A] = new AbstractIterator[A] {
+  override def tabulate[A](end: Int)(f: Int => A): Iterator[A] = new AbstractIterator[A] {
     private var i = 0
     def hasNext: Boolean = i < end
     def next(): A =
@@ -1488,7 +1566,6 @@ object Iterator {
       }
     }
   }
-
 }
 
 /** Explicit instantiation of the `Iterator` trait to reduce class file size in subclasses. */
