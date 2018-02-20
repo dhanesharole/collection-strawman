@@ -257,7 +257,7 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
       var cursor = this
       var n = 1
       if (cursor.tailDefined) {  // If tailDefined, also !isEmpty
-        var scout = tail
+        var scout = cursor.tail
         if (scout.isEmpty) {
           // Single element.  Bail out early.
           return b

@@ -180,6 +180,11 @@ class LazyListTest {
     val l = 1 #:: 2 #:: 3 #:: 4 #:: LazyList.Empty
     l.toList
     assertEquals("LazyList(1, 2, 3, 4)", l.toString)
+    val l1 = 10 #:: 20 #:: 30 #:: LazyList.Empty
+    l1.force
+    // after `force` this LazyList's, `head` would be present in the string but its tail's `head` won't be there,
+    // as both `head` and `tail` of that cons are lazy in nature.
+    assertEquals("LazyList(10, ?)", l1.toString)
   }
 
   @Test
