@@ -222,111 +222,92 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
     else tail.foldLeft(op(z, head))(op)
   }
 
-  /** Write all defined elements of this iterable into given string builder.
-    *  The written text begins with the string `start` and is finished by the string
-    *  `end`. Inside, the string representations of defined elements (w.r.t.
-    *  the method `toString()`) are separated by the string `sep`. The method will
-    *  not force evaluation of undefined elements. A tail of such elements will be
-    * represented by a `"?"` instead.  A cyclic stream is represented by a `"..."`
-    * at the point where the cycle repeats.
-    *
-    * @param b The [[collection.mutable.StringBuilder]] factory to which we need
-    * to add the string elements.
-    * @param start The prefix of the resulting string (e.g. "LazyList(")
-    * @param sep The separator between elements of the resulting string (e.g. ",")
-    * @param end The end of the resulting string (e.g. ")")
-    * @return The original [[collection.mutable.StringBuilder]] containing the
-    * resulting string.
-    */
-  protected def toStringBuilder(b: StringBuilder, start: String, sep: String, end: String): StringBuilder = {
-    b append start
-    if (!isEmpty) {
-      if (headDefined && !tailDefined) b append head // For LazyList, head is also Lazy. Hence adds `?` if it not defined yet
-      if (!headDefined && tailDefined) b append "?" // For LazyList, head is also Lazy. Hence adds `?` if it not defined yet
-      if (headDefined && tailDefined) b append head
-      if (!headDefined && !tailDefined) {
-        // nothing to evaluate. Bail out early
-        b append "?" append end
-        return b
-      }
-      var cursor = this
-      var n = 1
-      if (cursor.tailDefined) {  // If tailDefined, also !isEmpty
-        var scout = cursor.tail
-        if (scout.isEmpty) {
-          // Single element.  Bail out early.
-          return b
-        }
-        if (cursor ne scout) {
-          cursor = scout
-          if (scout.tailDefined) {
-            scout = scout.tail
-            // Use 2x 1x iterator trick for cycle detection; slow iterator can add strings
-            while ((cursor ne scout) && scout.tailDefined) {
-              if (cursor.headDefined) b append sep append cursor.head
-              n += 1
-              cursor = cursor.tail
+  override def toString: String = {
+    /** Write all defined elements of this iterable into given string builder.
+      *  The written text begins with the string `start` and is finished by the string
+      *  `end`. Inside, the string representations of defined elements (w.r.t.
+      *  the method `toString()`) are separated by the string `sep`. The method will
+      *  not force evaluation of undefined elements. A tail of such elements will be
+      * represented by a `"?"` instead.  A cyclic stream is represented by a `"..."`
+      * at the point where the cycle repeats.
+      *
+      * @param b The [[collection.mutable.StringBuilder]] factory to which we need
+      * to add the string elements.
+      * @param start The prefix of the resulting string (e.g. "LazyList(")
+      * @param sep The separator between elements of the resulting string (e.g. ",")
+      * @param end The end of the resulting string (e.g. ")")
+      * @return The original [[collection.mutable.StringBuilder]] containing the
+      * resulting string.
+      */
+    def toStringBuilder(b: StringBuilder, start: String, sep: String, end: String): StringBuilder = {
+      b append start
+      if (nonEmpty) {
+        if (headDefined) b append head else b append "?"
+        var cursor = this
+        if (cursor.tailDefined) {  // If tailDefined, also !isEmpty
+          var scout = cursor.tail
+          if (cursor ne scout) {
+            cursor = scout
+            if (scout.tailDefined) {
               scout = scout.tail
-              if (scout.tailDefined) scout = scout.tail
+              // Use 2x 1x iterator trick for cycle detection; slow iterator can add strings
+              while ((cursor ne scout) && scout.tailDefined) {
+                if (cursor.headDefined) b append sep append cursor.head
+                cursor = cursor.tail
+                scout = scout.tail
+                if (scout.tailDefined) scout = scout.tail
+              }
+            }
+          }
+          if (!scout.tailDefined) {  // Not a cycle, scout hit an end
+            while (cursor.headDefined) {
+              b append sep append cursor.head
+              cursor = cursor.tail
+            }
+          }
+          else {
+            // Cycle.
+            // If we have a prefix of length P followed by a cycle of length C,
+            // the scout will be at position (P%C) in the cycle when the cursor
+            // enters it at P.  They'll then collide when the scout advances another
+            // C - (P%C) ahead of the cursor.
+            // If we run the scout P farther, then it will be at the start of
+            // the cycle: (C - (P%C) + (P%C)) == C == 0.  So if another runner
+            // starts at the beginning of the prefix, they'll collide exactly at
+            // the start of the loop.
+            var runner = this
+            var k = 0
+            while (runner ne scout) {
+              runner = runner.tail
+              scout = scout.tail
+              k += 1
+            }
+            // Now runner and scout are at the beginning of the cycle.  Advance
+            // cursor, adding to string, until it hits; then we'll have covered
+            // everything once.  If cursor is already at beginning, we'd better
+            // advance one first unless runner didn't go anywhere (in which case
+            // we've already looped once).
+            if ((cursor eq scout) && (k > 0)) {
+              if (cursor.headDefined) b append sep append cursor.head
+              cursor = cursor.tail
+            }
+            while (cursor ne scout) {
+              if (cursor.headDefined) b append sep append cursor.head
+              cursor = cursor.tail
             }
           }
         }
-        if (!scout.tailDefined) {  // Not a cycle, scout hit an end
-          while (cursor ne scout) {
-            if (cursor.headDefined) b append sep append cursor.head
-            n += 1
-            cursor = cursor.tail
-          }
-          if (cursor.nonEmpty) {
-            if (cursor.headDefined) b append sep append cursor.head
-          }
-        }
-        else {
-          // Cycle.
-          // If we have a prefix of length P followed by a cycle of length C,
-          // the scout will be at position (P%C) in the cycle when the cursor
-          // enters it at P.  They'll then collide when the scout advances another
-          // C - (P%C) ahead of the cursor.
-          // If we run the scout P farther, then it will be at the start of
-          // the cycle: (C - (P%C) + (P%C)) == C == 0.  So if another runner
-          // starts at the beginning of the prefix, they'll collide exactly at
-          // the start of the loop.
-          var runner = this
-          var k = 0
-          while (runner ne scout) {
-            runner = runner.tail
-            scout = scout.tail
-            k += 1
-          }
-          // Now runner and scout are at the beginning of the cycle.  Advance
-          // cursor, adding to string, until it hits; then we'll have covered
-          // everything once.  If cursor is already at beginning, we'd better
-          // advance one first unless runner didn't go anywhere (in which case
-          // we've already looped once).
-          if ((cursor eq scout) && (k > 0)) {
-            if (cursor.headDefined) b append sep append cursor.head
-            n += 1
-            cursor = cursor.tail
-          }
-          while (cursor ne scout) {
-            if (cursor.headDefined) b append sep append cursor.head
-            n += 1
-            cursor = cursor.tail
-          }
-          // Subtract prefix length from total length for cycle reporting.
-          // (Not currently used, but probably a good idea for the future.)
-          n -= k
+        if (cursor.nonEmpty) {
+          // Either undefined or cyclic; we can check with tailDefined
+          if (!cursor.tailDefined) b append sep append "?"
+          else b append sep append "..."
         }
       }
-      if (!cursor.isEmpty) {
-        // Either undefined or cyclic; we can check with tailDefined
-        if (!cursor.tailDefined) b append sep append "?"
-        else b append sep append "..."
-      }
+      b append end
     }
-    b append end
-  }
 
+    s"$className${toStringBuilder(new StringBuilder, "(", ", ", ")").result()}"
+  }
 }
 
 sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with LazyListOps[X, CC, CC[X]], +C <: CC[A]] extends LinearSeqOps[A, CC, C] {
@@ -343,8 +324,6 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
   protected def tailDefined: Boolean
 
   protected def headDefined: Boolean
-
-  override def nonEmpty: Boolean = !isEmpty
 
   /** The stream resulting from the concatenation of this stream with the argument stream.
     *
@@ -466,12 +445,6 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
     else cons[(A, B)]((this.head, that.head), this.tail.zip(that.tail))
 
   override final def zipWithIndex: CC[(A, Int)] = this.zip(LazyList.from(0))
-
-  protected def toStringBuilder(b: StringBuilder, start: String, sep: String, end: String): StringBuilder
-
-  override def toString: String = {
-    s"$className${toStringBuilder(new StringBuilder, "(", ", ", ")").result()}"
-  }
 }
 
 sealed private[immutable] trait LazyListFactory[+CC[+X] <: LinearSeq[X] with LazyListOps[X, CC, CC[X]]] extends SeqFactory[CC] {
@@ -685,102 +658,94 @@ sealed abstract class Stream[+A] extends LinearSeq[A] with LazyListOps[A, Stream
     else tail.foldLeft(op(z, head))(op)
   }
 
-  /** Write all defined elements of this iterable into given string builder.
-    *  The written text begins with the string `start` and is finished by the string
-    *  `end`. Inside, the string representations of defined elements (w.r.t.
-    *  the method `toString()`) are separated by the string `sep`. The method will
-    *  not force evaluation of undefined elements. A tail of such elements will be
-    * represented by a `"?"` instead.  A cyclic stream is represented by a `"..."`
-    * at the point where the cycle repeats.
-    *
-    * @param b The [[collection.mutable.StringBuilder]] factory to which we need
-    * to add the string elements.
-    * @param start The prefix of the resulting string (e.g. "Stream(")
-    * @param sep The separator between elements of the resulting string (e.g. ",")
-    * @param end The end of the resulting string (e.g. ")")
-    * @return The original [[collection.mutable.StringBuilder]] containing the
-    * resulting string.
-    */
-  protected def toStringBuilder(b: StringBuilder, start: String, sep: String, end: String): StringBuilder = {
-    b append start
-    if (!isEmpty) {
-      b append head
-      var cursor = this
-      var n = 1
-      if (cursor.tailDefined) {  // If tailDefined, also !isEmpty
-        var scout = tail
-        if (scout.isEmpty) {
-          // Single element.  Bail out early.
-          return b
-        }
-        if (cursor ne scout) {
-          cursor = scout
-          if (scout.tailDefined) {
-            scout = scout.tail
-            // Use 2x 1x iterator trick for cycle detection; slow iterator can add strings
-            while ((cursor ne scout) && scout.tailDefined) {
-              b append sep append cursor.head
-              n += 1
-              cursor = cursor.tail
+  override def toString: String = {
+    /** Write all defined elements of this iterable into given string builder.
+      *  The written text begins with the string `start` and is finished by the string
+      *  `end`. Inside, the string representations of defined elements (w.r.t.
+      *  the method `toString()`) are separated by the string `sep`. The method will
+      *  not force evaluation of undefined elements. A tail of such elements will be
+      * represented by a `"?"` instead.  A cyclic stream is represented by a `"..."`
+      * at the point where the cycle repeats.
+      *
+      * @param b The [[collection.mutable.StringBuilder]] factory to which we need
+      * to add the string elements.
+      * @param start The prefix of the resulting string (e.g. "Stream(")
+      * @param sep The separator between elements of the resulting string (e.g. ",")
+      * @param end The end of the resulting string (e.g. ")")
+      * @return The original [[collection.mutable.StringBuilder]] containing the
+      * resulting string.
+      */
+    def toStringBuilder(b: StringBuilder, start: String, sep: String, end: String): StringBuilder = {
+      b append start
+      if (nonEmpty) {
+        b append head
+        var cursor = this
+        if (cursor.tailDefined) {  // If tailDefined, also !isEmpty
+          var scout = tail
+          if (cursor ne scout) {
+            cursor = scout
+            if (scout.tailDefined) {
               scout = scout.tail
-              if (scout.tailDefined) scout = scout.tail
+              // Use 2x 1x iterator trick for cycle detection; slow iterator can add strings
+              while ((cursor ne scout) && scout.tailDefined) {
+                b append sep append cursor.head
+                cursor = cursor.tail
+                scout = scout.tail
+                if (scout.tailDefined) scout = scout.tail
+              }
+            }
+          }
+          if (!scout.tailDefined) {  // Not a cycle, scout hit an end
+            while (cursor ne scout) {
+              b append sep append cursor.head
+              cursor = cursor.tail
+            }
+            if (cursor.nonEmpty) {
+              b append sep append cursor.head
+            }
+          }
+          else {
+            // Cycle.
+            // If we have a prefix of length P followed by a cycle of length C,
+            // the scout will be at position (P%C) in the cycle when the cursor
+            // enters it at P.  They'll then collide when the scout advances another
+            // C - (P%C) ahead of the cursor.
+            // If we run the scout P farther, then it will be at the start of
+            // the cycle: (C - (P%C) + (P%C)) == C == 0.  So if another runner
+            // starts at the beginning of the prefix, they'll collide exactly at
+            // the start of the loop.
+            var runner = this
+            var k = 0
+            while (runner ne scout) {
+              runner = runner.tail
+              scout = scout.tail
+              k += 1
+            }
+            // Now runner and scout are at the beginning of the cycle.  Advance
+            // cursor, adding to string, until it hits; then we'll have covered
+            // everything once.  If cursor is already at beginning, we'd better
+            // advance one first unless runner didn't go anywhere (in which case
+            // we've already looped once).
+            if ((cursor eq scout) && (k > 0)) {
+              b append sep append cursor.head
+              cursor = cursor.tail
+            }
+            while (cursor ne scout) {
+              b append sep append cursor.head
+              cursor = cursor.tail
             }
           }
         }
-        if (!scout.tailDefined) {  // Not a cycle, scout hit an end
-          while (cursor ne scout) {
-            b append sep append cursor.head
-            n += 1
-            cursor = cursor.tail
-          }
-          if (cursor.nonEmpty) {
-            b append sep append cursor.head
-          }
-        }
-        else {
-          // Cycle.
-          // If we have a prefix of length P followed by a cycle of length C,
-          // the scout will be at position (P%C) in the cycle when the cursor
-          // enters it at P.  They'll then collide when the scout advances another
-          // C - (P%C) ahead of the cursor.
-          // If we run the scout P farther, then it will be at the start of
-          // the cycle: (C - (P%C) + (P%C)) == C == 0.  So if another runner
-          // starts at the beginning of the prefix, they'll collide exactly at
-          // the start of the loop.
-          var runner = this
-          var k = 0
-          while (runner ne scout) {
-            runner = runner.tail
-            scout = scout.tail
-            k += 1
-          }
-          // Now runner and scout are at the beginning of the cycle.  Advance
-          // cursor, adding to string, until it hits; then we'll have covered
-          // everything once.  If cursor is already at beginning, we'd better
-          // advance one first unless runner didn't go anywhere (in which case
-          // we've already looped once).
-          if ((cursor eq scout) && (k > 0)) {
-            b append sep append cursor.head
-            n += 1
-            cursor = cursor.tail
-          }
-          while (cursor ne scout) {
-            b append sep append cursor.head
-            n += 1
-            cursor = cursor.tail
-          }
-          // Subtract prefix length from total length for cycle reporting.
-          // (Not currently used, but probably a good idea for the future.)
-          n -= k
+        if (cursor.nonEmpty) {
+          // Either undefined or cyclic; we can check with tailDefined
+          if (!cursor.tailDefined) b append sep append "?"
+          else b append sep append "..."
         }
       }
-      if (!cursor.isEmpty) {
-        // Either undefined or cyclic; we can check with tailDefined
-        if (!cursor.tailDefined) b append sep append "?"
-        else b append sep append "..."
-      }
+      b append end
     }
-    b append end
+
+    s"$className${toStringBuilder(new StringBuilder, "(", ", ", ")").result()}"
   }
 
 }

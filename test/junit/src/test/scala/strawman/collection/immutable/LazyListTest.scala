@@ -135,7 +135,7 @@ class LazyListTest {
   @Test
   def testLazyListToStringWhenHeadAndTailBothAreNotEvaluated = {
     val l = LazyList(1, 2, 3, 4, 5)
-    assertEquals("LazyList(?)", l.toString)
+    assertEquals("LazyList(?, ?)", l.toString)
   }
 
   @Test
@@ -191,6 +191,13 @@ class LazyListTest {
   def testLazyListToStringWhenStreamIsEmpty: Unit = {
     val l = LazyList.empty
     assertEquals("LazyList()", l.toString)
+  }
+
+  @Test
+  def testLazyListToStringForSingleElementList: Unit = {
+    val l = LazyList(1)
+    l.force
+    assertEquals("LazyList(1)", l.toString)
   }
 
   @Test
