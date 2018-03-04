@@ -10,7 +10,7 @@ package strawman
 package collection.mutable
 
 import collection.Iterator
-import collection.arrayToArrayOps
+import collection.arrayToWrappedArray
 
 import java.lang.Integer.{numberOfLeadingZeros, rotateRight}
 import scala.util.hashing.byteswap32
@@ -156,13 +156,6 @@ private[mutable] abstract class HashTable[A, B, Entry >: Null <: HashEntry[A, En
     nnSizeMapAdd(h)
     if (tableSize > threshold)
       resize(2 * table.length)
-  }
-
-  protected[collection] def addEntry2(e: Entry, h: Int): Unit = {
-    e.next = table(h).asInstanceOf[Entry]
-    table(h) = e
-    tableSize += 1
-    nnSizeMapAdd(h)
   }
 
   /** Find entry with given key in table, or add new one if not found.

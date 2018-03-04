@@ -1,7 +1,7 @@
 package strawman
 package collection.immutable
 
-import strawman.collection.mutable.{ArrayBuffer, Builder}
+import strawman.collection.mutable.{ArrayBuffer, Builder, ArrayBuilder}
 import strawman.collection.{IterableOnce, Iterator, SeqFactory, ClassTagSeqFactory, StrictOptimizedClassTagSeqFactory, View}
 
 import scala.{Any, ArrayIndexOutOfBoundsException, Boolean, Int, Nothing, UnsupportedOperationException, throws, Array, AnyRef, `inline`, Serializable, SerialVersionUID, Byte, Short, Long, Double, Unit, Float, Char}
@@ -66,27 +66,24 @@ sealed abstract class ImmutableArray[+A]
     ImmutableArray.unsafeWrapArray(dest)
   }
 
-  override def appendedAll[B >: A](xs: collection.Iterable[B]): ImmutableArray[B] =
-    xs match {
-      case bs: ImmutableArray[B] =>
-        val dest = Array.ofDim[Any](length + bs.length)
-        Array.copy(unsafeArray, 0, dest, 0, length)
-        Array.copy(bs.unsafeArray, 0, dest, length, bs.length)
-        ImmutableArray.unsafeWrapArray(dest)
-      case _ =>
-        fromIterable(View.Concat(toIterable, xs))
-    }
+  override def appendedAll[B >: A](suffix: collection.Iterable[B]): ImmutableArray[B] = {
+    val b = ArrayBuilder.make[Any]()
+    val k = suffix.knownSize
+    if(k >= 0) b.sizeHint(k + unsafeArray.length)
+    b.addAll(unsafeArray)
+    b.addAll(suffix)
+    ImmutableArray.unsafeWrapArray(b.result())
+  }
 
-  override def prependedAll[B >: A](xs: collection.Iterable[B]): ImmutableArray[B] =
-    xs match {
-      case bs: ImmutableArray[B] =>
-        val dest = Array.ofDim[Any](length + bs.length)
-        Array.copy(bs.unsafeArray, 0, dest, 0, bs.length)
-        Array.copy(unsafeArray, 0, dest, bs.length, length)
-        ImmutableArray.unsafeWrapArray(dest)
-      case _ =>
-        fromIterable(View.Concat(xs, toIterable))
-    }
+  override def prependedAll[B >: A](prefix: collection.Iterable[B]): ImmutableArray[B] = {
+    val b = ArrayBuilder.make[Any]()
+    val k = prefix.knownSize
+    if(k >= 0) b.sizeHint(k + unsafeArray.length)
+    b.addAll(prefix)
+    if(k < 0) b.sizeHint(b.length + unsafeArray.length)
+    b.addAll(unsafeArray)
+    ImmutableArray.unsafeWrapArray(b.result())
+  }
 
   override def zip[B](that: collection.Iterable[B]): ImmutableArray[(A, B)] =
     that match {
@@ -95,7 +92,7 @@ sealed abstract class ImmutableArray[+A]
           (apply(i), bs(i))
         }
       case _ =>
-        fromIterable(View.Zip(toIterable, that))
+        fromIterable(new View.Zip(toIterable, that))
     }
 
   override def take(n: Int): ImmutableArray[A] = iterableFactory.tabulate(n)(apply)
@@ -122,6 +119,14 @@ sealed abstract class ImmutableArray[+A]
   override def reverse: ImmutableArray[A] = iterableFactory.tabulate(length)(i => apply(length - 1 - i))
 
   override def className = "ImmutableArray"
+
+  override def copyToArray[B >: A](xs: Array[B], start: Int = 0): xs.type = copyToArray[B](xs, start, length)
+
+  override def copyToArray[B >: A](xs: Array[B], start: Int, len: Int): xs.type = {
+    val l = scala.math.min(scala.math.min(len, length), xs.length-start)
+    if(l > 0) Array.copy(unsafeArray, 0, xs, start, l)
+    xs
+  }
 }
 
 /**

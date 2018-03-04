@@ -10,7 +10,7 @@ trait Seq[+A] extends Iterable[A]
 
   override final def toSeq: this.type = this
 
-  override def iterableFactory: SeqFactory[Seq] = Seq
+  override def iterableFactory: SeqFactory[IterableCC] = Seq
 }
 
 /**
@@ -26,7 +26,7 @@ trait SeqOps[+A, +CC[_], +C] extends Any with collection.SeqOps[A, CC, C] {
     *  @return a new $coll which is a copy of this $coll with the element at position `index` replaced by `elem`.
     *  @throws IndexOutOfBoundsException if `index` does not satisfy `0 <= index < length`.
     */
-  def updated[B >: A](index: Int, elem: B): CC[B] = fromIterable(View.Updated(toIterable, index, elem))
+  def updated[B >: A](index: Int, elem: B): CC[B] = fromIterable(new View.Updated(this, index, elem))
 }
 
 /**
@@ -43,13 +43,23 @@ trait IndexedSeq[+A] extends Seq[A]
 
   final override def toIndexedSeq: IndexedSeq[A] = this
 
-  override def iterableFactory: SeqFactory[IndexedSeq] = IndexedSeq
+  override def iterableFactory: SeqFactory[IterableCC] = IndexedSeq
 }
 
 object IndexedSeq extends SeqFactory.Delegate[IndexedSeq](Vector)
 
 /** Base trait for immutable indexed Seq operations */
-trait IndexedSeqOps[+A, +CC[X] <: IndexedSeq[X], +C] extends SeqOps[A, CC, C] with collection.IndexedSeqOps[A, CC, C]
+trait IndexedSeqOps[+A, +CC[_], +C]
+  extends SeqOps[A, CC, C]
+    with collection.IndexedSeqOps[A, CC, C] {
+
+  override def slice(from: Int, until: Int): C = {
+    // since we are immutable we can just share the same collection
+    if (from <= 0 && until >= length) coll
+    else super.slice(from, until)
+  }
+
+}
 
 /** Base trait for immutable linear sequences that have efficient `head` and `tail` */
 trait LinearSeq[+A]
@@ -57,7 +67,7 @@ trait LinearSeq[+A]
     with collection.LinearSeq[A]
     with LinearSeqOps[A, LinearSeq, LinearSeq[A]] {
 
-  override def iterableFactory: SeqFactory[LinearSeq] = LinearSeq
+  override def iterableFactory: SeqFactory[IterableCC] = LinearSeq
 }
 
 object LinearSeq extends SeqFactory.Delegate[LinearSeq](List)

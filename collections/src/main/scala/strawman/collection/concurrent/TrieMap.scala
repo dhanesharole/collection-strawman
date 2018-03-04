@@ -582,19 +582,19 @@ private[collection] final class CNode[K, V](val bitmap: Int, val array: Array[Ba
   private[concurrent] def string(lev: Int): String = "CNode %x\n%s".format(bitmap, array.map(_.string(lev + 1)).mkString("\n"))
 
   /* quiescently consistent - don't call concurrently to anything involving a GCAS!! */
-  private def collectElems: Seq[(K, V)] = array flatMap {
+  private def collectElems: Seq[(K, V)] = array.flatMap({
     case sn: SNode[K, V] => Some(sn.kvPair): IterableOnce[(K, V)]
     case in: INode[K, V] => in.mainnode match {
       case tn: TNode[K, V] => Some(tn.kvPair): IterableOnce[(K, V)]
       case ln: LNode[K, V] => ln.entries.to(immutable.List)
       case cn: CNode[K, V] => cn.collectElems
     }
-  }
+  }: (BasicNode => IterableOnce[(K, V)])) //TODO remove type annotatation in 2.13
 
-  private def collectLocalElems: Seq[String] = array flatMap {
+  private def collectLocalElems: Seq[String] = array.flatMap({
     case sn: SNode[K, V] => Some(sn.kvPair._2.toString): IterableOnce[String]
     case in: INode[K, V] => Some(scala.Predef.augmentString(in.toString).drop(14) + "(" + in.gen + ")"): IterableOnce[String]
-  }
+  }: (BasicNode => IterableOnce[String])) //TODO remove type annotatation in 2.13
 
   override def toString = {
     val elems = collectLocalElems
@@ -955,11 +955,11 @@ final class TrieMap[K, V] private (r: AnyRef, rtupd: AtomicReferenceFieldUpdater
     if (nonReadOnly) readOnlySnapshot().keySet
     else super.keySet
   }
-  override def filterKeys(p: K => Boolean): collection.View[(K, V)] = {
+  override def filterKeys(p: K => Boolean): collection.MapView[K, V] = {
     if (nonReadOnly) readOnlySnapshot().filterKeys(p)
     else super.filterKeys(p)
   }
-  override def mapValues[W](f: V => W): collection.View[(K, W)] = {
+  override def mapValues[W](f: V => W): collection.MapView[K, W] = {
     if (nonReadOnly) readOnlySnapshot().mapValues(f)
     else super.mapValues(f)
   }

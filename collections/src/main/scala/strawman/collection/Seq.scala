@@ -82,7 +82,9 @@ object Seq extends SeqFactory.Delegate[Seq](immutable.Seq)
   * @define Coll `Seq`
   */
 trait SeqOps[+A, +CC[_], +C] extends Any
-  with IterableOps[A, CC, C] {
+  with IterableOps[A, CC, C] { self =>
+
+  override def view: SeqView[A] = new SeqView.Id[A](this)
 
   /** Get the element at the specified index. This operation is provided for convenience in `Seq`. It should
     * not be assumed to be efficient unless you have an `IndexedSeq`. */
@@ -119,7 +121,7 @@ trait SeqOps[+A, +CC[_], +C] extends Any
     *    @return a new $coll consisting of `value` followed
     *            by all elements of this $coll.
     */
-  def prepended[B >: A](elem: B): CC[B] = fromIterable(View.Prepend(elem, toIterable))
+  def prepended[B >: A](elem: B): CC[B] = fromIterable(new View.Prepended(elem, this))
 
   /** Alias for `prepended`.
     *
@@ -149,7 +151,7 @@ trait SeqOps[+A, +CC[_], +C] extends Any
     * @return a new $coll consisting of
     *         all elements of this $coll followed by `value`.
     */
-  def appended[B >: A](elem: B): CC[B] = fromIterable(View.Append(toIterable, elem))
+  def appended[B >: A](elem: B): CC[B] = fromIterable(new View.Appended(this, elem))
 
   /** Alias for `appended`
     *
@@ -170,7 +172,7 @@ trait SeqOps[+A, +CC[_], +C] extends Any
     *  @return       a new $coll which contains all elements of `prefix` followed
     *                  by all the elements of this $coll.
     */
-  def prependedAll[B >: A](prefix: Iterable[B]): CC[B] = fromIterable(View.Concat(prefix, toIterable))
+  def prependedAll[B >: A](prefix: Iterable[B]): CC[B] = fromIterable(new View.Concat(prefix, this))
 
   /** Alias for `prependedAll` */
   @`inline` final def ++: [B >: A](prefix: Iterable[B]): CC[B] = prependedAll(prefix)
@@ -208,7 +210,7 @@ trait SeqOps[+A, +CC[_], +C] extends Any
     * @tparam B the type of the elements after being transformed by `f`
     * @return a new $coll consisting of all the elements of this $coll without duplicates.
     */
-  def distinctBy[B](f: A => B): C = fromSpecificIterable(View.DistinctBy(toIterable, f))
+  def distinctBy[B](f: A => B): C = fromSpecificIterable(new View.DistinctBy(this, f))
 
   /** Returns new $coll with elements in reversed order.
    *
@@ -282,7 +284,7 @@ trait SeqOps[+A, +CC[_], +C] extends Any
    *          all elements of this $coll followed by the minimal number of occurrences of `elem` so
    *          that the resulting collection has a length of at least `len`.
    */
-  def padTo[B >: A](len: Int, elem: B): CC[B] = fromIterable(View.PadTo(toIterable, len, elem))
+  def padTo[B >: A](len: Int, elem: B): CC[B] = fromIterable(new View.PadTo(this, len, elem))
 
   /** Computes length of longest segment whose elements all satisfy some predicate.
     *
@@ -423,7 +425,7 @@ trait SeqOps[+A, +CC[_], +C] extends Any
   def contains[A1 >: A](elem: A1): Boolean = exists (_ == elem)
 
   @deprecated("Use .reverseIterator().map(f).to(...) instead of .reverseMap(f)", "2.13.0")
-  def reverseMap[B](f: A => B): CC[B] = fromIterable(View.Map(View.fromIteratorProvider(() => reverseIterator()), f))
+  def reverseMap[B](f: A => B): CC[B] = fromIterable(new View.Map(View.fromIteratorProvider(() => reverseIterator()), f))
 
   /** Iterates over distinct permutations.
     *
@@ -494,7 +496,7 @@ trait SeqOps[+A, +CC[_], +C] extends Any
 
     private[this] def init() = {
       val m = mutable.HashMap[A, Int]()
-      val (es, is) = (toSeq map (e => (e, m.getOrElseUpdate(e, m.size))) sortBy (_._2)).unzip
+      val (es, is) = (self.toSeq map (e => (e, m.getOrElseUpdate(e, m.size))) sortBy (_._2)).unzip
 
       (es.to(mutable.ArrayBuffer), is.toArray)
     }
@@ -555,7 +557,7 @@ trait SeqOps[+A, +CC[_], +C] extends Any
       val m = mutable.HashMap[A, Int]()
 
       // e => (e, weight(e))
-      val (es, is) = (toSeq map (e => (e, m.getOrElseUpdate(e, m.size))) sortBy (_._2)).unzip
+      val (es, is) = (self.toSeq map (e => (e, m.getOrElseUpdate(e, m.size))) sortBy (_._2)).unzip
       val cs = new Array[Int](m.size)
       is foreach (i => cs(i) += 1)
       val ns = new Array[Int](cs.length)
@@ -764,10 +766,10 @@ trait SeqOps[+A, +CC[_], +C] extends Any
     *                   by all the elements of `other`.
     */
   def patch[B >: A](from: Int, other: IterableOnce[B], replaced: Int): CC[B] =
-    fromIterable(new View.Patched(toIterable, from, other, replaced))
+    fromIterable(new View.Patched(this, from, other, replaced))
 
   private[this] def occCounts[B](sq: Seq[B]): mutable.Map[B, Int] = {
-    val occ = mutable.Map.empty[B, Int].withDefaultValue(0)
+    val occ = new mutable.HashMap[B, Int] { override def default(k: B) = 0 }
     for (y <- sq) occ(y) += 1
     occ
   }
