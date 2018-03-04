@@ -181,11 +181,6 @@ class LazyListTest {
     val l = 1 #:: 2 #:: 3 #:: 4 #:: LazyList.Empty
     l.toList
     assertEquals("LazyList(1, 2, 3, 4)", l.toString)
-    val l1 = 10 #:: 20 #:: 30 #:: LazyList.Empty
-    l1.force
-    // after `force` this LazyList's, `head` would be present in the string but its tail's `head` won't be there,
-    // as both `head` and `tail` of that cons are lazy in nature.
-    assertEquals("LazyList(10, ?)", l1.toString)
   }
 
   @Test
@@ -230,7 +225,7 @@ class LazyListTest {
     assertEquals(3, i)
     // it's possible to implement `force` with incorrect string representation
     // (to forget about `tlEvaluated` update)
-    assertEquals( "1 #:: 2 #:: 3 #:: Empty", xs.toString())
+    assertEquals( "LazyList(1, 2, 3)", xs.toString())
   }
 
   val cycle1: LazyList[Int] = 1 #:: 2 #:: cycle1

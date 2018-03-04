@@ -134,7 +134,7 @@ class StreamTest {
     assertEquals(3, i)
     // it's possible to implement `force` with incorrect string representation
     // (to forget about `tlEvaluated` update)
-    assertEquals( "1 #:: 2 #:: 3 #:: Empty", xs.toString())
+    assertEquals( "Stream(1, 2, 3)", xs.toString())
   }
 
   val cycle1: Stream[Int] = 1 #:: 2 #:: cycle1
@@ -199,11 +199,6 @@ class StreamTest {
     val l = 1 #:: 2 #:: 3 #:: 4 #:: Stream.empty
     l.toList
     assertEquals("Stream(1, 2, 3, 4)", l.toString)
-    val s1 = 10 #:: 20 #:: 30 #:: Stream.Empty
-    s1.force
-    // after `force` this Stream's, `head` would be present in the string along with its tail's `head`,
-    // as both `head` and `tail` of that cons are not lazy in nature.
-    assertEquals("Stream(10, 20, ?)", s1.toString)
   }
 
   @Test
