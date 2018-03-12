@@ -221,9 +221,13 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
     else tail.foldLeft(op(z, head))(op)
   }
 
+
+  protected def tailDefined: Boolean
+  protected def headDefined: Boolean
+
   /**
-    * @return a string representation of this collection. Un-evaluated elements are
-    *         represented with `"_"`, un-evaluated tail is represented with `"?"`,
+    * @return a string representation of this collection. Undefined elements are
+    *         represented with `"_"`, an undefined tail is represented with `"?"`,
     *         and cycles are represented with `"..."`
     *
     *         Examples:
@@ -350,10 +354,6 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
     */
   def force: this.type
 
-  protected def tailDefined: Boolean
-
-  protected def headDefined: Boolean
-
   /** The stream resulting from the concatenation of this stream with the argument stream.
     *
     * @param suffix The collection that gets appended to this lazy list
@@ -410,7 +410,7 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
   /** A FilterMonadic which allows GC of the head of stream during processing */
   @noinline // Workaround scala/bug#9137, see https://github.com/scala/scala/pull/4284#issuecomment-73180791
   override final def withFilter(p: A => Boolean): collection.WithFilter[A, CC] =
-  iterableFactory.withFilter(coll, p)
+    iterableFactory.withFilter(coll, p)
 
   override final def prepended[B >: A](elem: B): CC[B] = cons(elem, coll)
 
@@ -439,20 +439,20 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
   // optimisations are not for speed, but for functionality
   // see tickets #153, #498, #2147, and corresponding tests in run/ (as well as run/stream_flatmap_odds.scala)
   override final def flatMap[B](f: A => IterableOnce[B]): CC[B] =
-  if (isEmpty) iterableFactory.empty
-  else {
-    // establish !prefix.isEmpty || nonEmptyPrefix.isEmpty
-    var nonEmptyPrefix: CC[A] = coll
-    var prefix = iterableFactory.from(f(nonEmptyPrefix.head))
-    while (!nonEmptyPrefix.isEmpty && prefix.isEmpty) {
-      nonEmptyPrefix = nonEmptyPrefix.tail
-      if(!nonEmptyPrefix.isEmpty)
-        prefix = iterableFactory.from(f(nonEmptyPrefix.head))
-    }
+    if (isEmpty) iterableFactory.empty
+    else {
+      // establish !prefix.isEmpty || nonEmptyPrefix.isEmpty
+      var nonEmptyPrefix: CC[A] = coll
+      var prefix = iterableFactory.from(f(nonEmptyPrefix.head))
+      while (!nonEmptyPrefix.isEmpty && prefix.isEmpty) {
+        nonEmptyPrefix = nonEmptyPrefix.tail
+        if(!nonEmptyPrefix.isEmpty)
+          prefix = iterableFactory.from(f(nonEmptyPrefix.head))
+      }
 
-    if (nonEmptyPrefix.isEmpty) iterableFactory.empty
-    else prefix.lazyAppendAll(nonEmptyPrefix.tail.flatMap(f))
-  }
+      if (nonEmptyPrefix.isEmpty) iterableFactory.empty
+      else prefix.lazyAppendAll(nonEmptyPrefix.tail.flatMap(f))
+    }
 
   override final def zip[B](that: collection.Iterable[B]): CC[(A, B)] =
     if (this.isEmpty || that.isEmpty) iterableFactory.empty
@@ -690,6 +690,9 @@ sealed abstract class Stream[+A] extends LinearSeq[A] with LazyListOps[A, Stream
     else tail.foldLeft(op(z, head))(op)
   }
 
+
+  protected def tailDefined: Boolean
+
   override def toString: String = {
     /** Write all defined elements of this iterable into given string builder.
       *  The written text begins with the string `start` and is finished by the string
@@ -792,7 +795,6 @@ object Stream extends LazyListFactory[Stream] {
     override def head: Nothing = throw new NoSuchElementException("head of empty lazy list")
     override def tail: Stream[Nothing] = throw new UnsupportedOperationException("tail of empty lazy list")
     protected def tailDefined: Boolean = false
-    protected def headDefined: Boolean = false
     /** Forces evaluation of the whole `Stream` and returns it.
       *
       * @note Often we use `Stream`s to represent an infinite set or series.  If
@@ -813,7 +815,6 @@ object Stream extends LazyListFactory[Stream] {
       tl
     }
     protected def tailDefined: Boolean = tlEvaluated
-    protected def headDefined: Boolean = true
     /** Forces evaluation of the whole `Stream` and returns it.
       *
       * @note Often we use `Stream`s to represent an infinite set or series.  If
