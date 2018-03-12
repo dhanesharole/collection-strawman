@@ -134,9 +134,14 @@ class LazyListTest {
   }
 
   @Test
+  def testEmptyLazyListToString(): Unit = {
+    assertEquals("LazyList()", LazyList.Empty.toString)
+  }
+
+  @Test
   def testLazyListToStringWhenHeadAndTailBothAreNotEvaluated = {
     val l = LazyList(1, 2, 3, 4, 5)
-    assertEquals("LazyList(?, ?)", l.toString)
+    assertEquals("LazyList(_, ?)", l.toString)
   }
 
   @Test
@@ -151,7 +156,7 @@ class LazyListTest {
     val l = LazyList(1, 2, 3, 4, 5)
     l.head
     l.tail
-    assertEquals("LazyList(1, ?)", l.toString)
+    assertEquals("LazyList(1, _, ?)", l.toString)
   }
 
   @Test
@@ -166,14 +171,28 @@ class LazyListTest {
   def testLazyListToStringWhenHeadIsNotEvaluatedAndOnlyTailIsEvaluated = {
     val l = LazyList(1, 2, 3, 4, 5)
     l.tail
-    assertEquals("LazyList(?, ?)", l.toString)
+    assertEquals("LazyList(_, _, ?)", l.toString)
   }
 
   @Test
-  def testLazyListToStringWhedHeadIsNotEvaluatedAndTailHeadIsEvaluated = {
+  def testLazyListToStringWhendHeadIsNotEvaluatedAndTailHeadIsEvaluated = {
     val l = LazyList(1, 2, 3, 4, 5)
     l.tail.head
-    assertEquals("LazyList(?, 2, ?)", l.toString)
+    assertEquals("LazyList(_, 2, ?)", l.toString)
+  }
+
+  @Test
+  def testLazyListToStringWhendHeadIsNotEvaluatedAndTailTailIsEvaluated = {
+    val l = LazyList(1, 2, 3, 4, 5)
+    l.tail.tail
+    assertEquals("LazyList(_, _, _, ?)", l.toString)
+  }
+
+  @Test
+  def testLazyListToStringWhendHeadIsNotEvaluatedAndTailTailHeadIsEvaluated = {
+    val l = LazyList(1, 2, 3, 4, 5)
+    l.tail.tail.head
+    assertEquals("LazyList(_, _, 3, ?)", l.toString)
   }
 
   @Test
@@ -197,12 +216,19 @@ class LazyListTest {
   }
 
   @Test
-  def testLaztListToStringWhenLazyListHasCyclicReference: Unit = {
+  def testLazyListToStringWhenLazyListHasCyclicReference: Unit = {
     lazy val cyc: LazyList[Int] = 1 #:: 2 #:: 3 #:: 4 #:: cyc
+    assertEquals("LazyList(_, ?)", cyc.toString)
     cyc.head
+    assertEquals("LazyList(1, ?)", cyc.toString)
+    cyc.tail
+    assertEquals("LazyList(1, _, ?)", cyc.toString)
     cyc.tail.head
+    assertEquals("LazyList(1, 2, ?)", cyc.toString)
     cyc.tail.tail.head
+    assertEquals("LazyList(1, 2, 3, ?)", cyc.toString)
     cyc.tail.tail.tail.head
+    assertEquals("LazyList(1, 2, 3, 4, ?)", cyc.toString)
     cyc.tail.tail.tail.tail.head
     assertEquals("LazyList(1, 2, 3, 4, ...)", cyc.toString)
   }

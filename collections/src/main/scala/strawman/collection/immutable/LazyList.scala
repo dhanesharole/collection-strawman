@@ -221,13 +221,28 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
     else tail.foldLeft(op(z, head))(op)
   }
 
+  /**
+    * @return a string representation of this collection. Un-evaluated elements are
+    *         represented with `"_"`, un-evaluated tail is represented with `"?"`,
+    *         and cycles are represented with `"..."`
+    *
+    *         Examples:
+    *
+    *           - `"LazyList(_, ?)"`, a non-empty lazy list, whose head has not been
+    *             evaluated ;
+    *           - `"LazyList(_, 1, _, ?)"`, a lazy list with at least three elements,
+    *             the second one has been evaluated ;
+    *           - `"LazyList(1, 2, 3, ...)"`, an infinite lazy list that contains
+    *             a cycle at the fourth element.
+    */
   override def toString: String = {
     /** Write all defined elements of this iterable into given string builder.
       *  The written text begins with the string `start` and is finished by the string
       *  `end`. Inside, the string representations of defined elements (w.r.t.
       *  the method `toString()`) are separated by the string `sep`. The method will
-      *  not force evaluation of undefined elements. A tail of such elements will be
-      * represented by a `"?"` instead.  A cyclic stream is represented by a `"..."`
+      *  not force evaluation of undefined elements. Undefined heads will be represented
+      *  by a `"_"`. An undefined tail is
+      * represented by a `"?"`.  A cyclic stream is represented by a `"..."`
       * at the point where the cycle repeats.
       *
       * @param b The [[collection.mutable.StringBuilder]] factory to which we need
@@ -241,17 +256,21 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
     def toStringBuilder(b: StringBuilder, start: String, sep: String, end: String): StringBuilder = {
       b append start
       if (nonEmpty) {
-        if (headDefined) b append head else b append "?"
+        if (headDefined) b append head else b append "_"
         var cursor = this
-        if (cursor.tailDefined) {  // If tailDefined, also !isEmpty
-          var scout = cursor.tail
+        def appendCursorElement(): Unit = {
+          b append sep
+          if (cursor.headDefined) b append cursor.head else b append "_"
+        }
+        if (tailDefined) {  // If tailDefined, also !isEmpty
+          var scout = tail
           if (cursor ne scout) {
             cursor = scout
             if (scout.tailDefined) {
               scout = scout.tail
               // Use 2x 1x iterator trick for cycle detection; slow iterator can add strings
               while ((cursor ne scout) && scout.tailDefined) {
-                if (cursor.headDefined) b append sep append cursor.head
+                appendCursorElement()
                 cursor = cursor.tail
                 scout = scout.tail
                 if (scout.tailDefined) scout = scout.tail
@@ -259,9 +278,12 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
             }
           }
           if (!scout.tailDefined) {  // Not a cycle, scout hit an end
-            while (cursor.headDefined) {
-              b append sep append cursor.head
+            while (cursor ne scout) {
+              appendCursorElement()
               cursor = cursor.tail
+            }
+            if (cursor.nonEmpty) {
+              appendCursorElement()
             }
           }
           else {
@@ -287,11 +309,11 @@ sealed abstract class LazyList[+A] extends LinearSeq[A] with LazyListOps[A, Lazy
             // advance one first unless runner didn't go anywhere (in which case
             // we've already looped once).
             if ((cursor eq scout) && (k > 0)) {
-              if (cursor.headDefined) b append sep append cursor.head
+              appendCursorElement()
               cursor = cursor.tail
             }
             while (cursor ne scout) {
-              if (cursor.headDefined) b append sep append cursor.head
+              appendCursorElement()
               cursor = cursor.tail
             }
           }
